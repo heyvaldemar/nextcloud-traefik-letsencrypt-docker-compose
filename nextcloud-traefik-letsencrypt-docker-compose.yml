@@ -33,6 +33,12 @@ services:
       POSTGRES_USER: nextclouddbuser
       # Database password (replace with yours)
       POSTGRES_PASSWORD: wDyzDH8MowfpuwGyBfNcnaV
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
 
   nextcloud:
@@ -75,8 +81,10 @@ services:
       - "traefik.http.middlewares.compresstraefik.compress=true"
     restart: unless-stopped
     depends_on:
-      - postgres
-      - traefik
+      postgres:
+        condition: service_healthy
+      traefik:
+        condition: service_healthy
 
   traefik:
     # Image tag (replace with yours)
@@ -172,5 +180,7 @@ services:
       POSTGRES_PASSWORD: wDyzDH8MowfpuwGyBfNcnaV
     restart: unless-stopped
     depends_on:
-      - postgres
-      - nextcloud
+      postgres:
+        condition: service_healthy
+      nextcloud:
+        condition: service_healthy
