@@ -23,7 +23,7 @@ volumes:
 services:
   postgres:
     # Image tag (replace with yours)
-    image: postgres:13.3
+    image: postgres:13
     volumes:
       - nextcloud-postgres:/var/lib/postgresql/data
     environment:
@@ -43,7 +43,7 @@ services:
 
   nextcloud:
     # Image tag (replace with yours)
-    image: nextcloud:22.0-apache
+    image: nextcloud:24-apache
     volumes:
       - nextcloud-data:/var/www/html
     environment:
@@ -88,7 +88,7 @@ services:
 
   traefik:
     # Image tag (replace with yours)
-    image: traefik:2.4
+    image: traefik:2.8
     command:
       - "--log.level=WARN"
       - "--accesslog=true"
@@ -145,7 +145,7 @@ services:
 
   backups:
     # Image tag (replace with yours)
-    image: postgres:13.3
+    image: postgres:13
     # Database backups prune interval (replace with yours). Default is 7 days.
     # find /srv/nextcloud-postgres/backups -type f -mtime +7 | xargs rm -f
 
