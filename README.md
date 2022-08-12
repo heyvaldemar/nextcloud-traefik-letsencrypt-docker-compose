@@ -8,7 +8,7 @@ Run `nextcloud-restore-database.sh` to restore database if needed.
 
 Deploy nextcloud server with a Docker Compose using the command:
 
-`docker-compose -f nextcloud-traefik-letsencrypt-docker-compose.yml -p nextcloud up -d`
+`docker compose -f nextcloud-traefik-letsencrypt-docker-compose.yml -p nextcloud up -d`
 
 Detailed installation guide can be found on my [website](https://www.heyvaldemar.com/install-nextcloud-with-docker-compose/).
 
