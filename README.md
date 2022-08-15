@@ -13,7 +13,6 @@ Deploy nextcloud server with a Docker Compose using the command:
 Detailed installation guide can be found on my [website](https://www.heyvaldemar.com/install-nextcloud-with-docker-compose/).
 
 # Author
-
 hey, I’m Vladimir Mikhalev, but my friends call me Valdemar.
 
 🌐 My [website](https://www.heyvaldemar.com/) with detailed IT guides\
