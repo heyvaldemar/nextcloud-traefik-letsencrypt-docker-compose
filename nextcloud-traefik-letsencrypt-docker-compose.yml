@@ -81,6 +81,13 @@ services:
       NEXTCLOUD_ADMIN_PASSWORD: fMRLVC4uJLyXVrj_CQwi
       # Nextcloud URL (replace with yours)
       NEXTCLOUD_TRUSTED_DOMAINS: nextcloud.heyvaldemar.net
+      # Nextcloud URL (replace with yours)
+      TRUSTED_PROXIES: nextcloud.heyvaldemar.net
+      # Nextcloud URL (replace with yours)
+      OVERWRITECLIURL: https://nextcloud.heyvaldemar.net
+      OVERWRITEPROTOCOL: https
+      # Nextcloud URL (replace with yours)
+      OVERWRITEHOST: nextcloud.heyvaldemar.net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/"]
       interval: 10s
