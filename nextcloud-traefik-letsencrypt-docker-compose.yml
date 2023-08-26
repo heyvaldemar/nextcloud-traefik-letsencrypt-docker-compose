@@ -81,6 +81,7 @@ networks:
 
 volumes:
   nextcloud-data:
+  redis-data:
   nextcloud-postgres:
   nextcloud-postgres-backup:
   nextcloud-data-backups:
@@ -106,6 +107,21 @@ services:
       start_period: 60s
     restart: unless-stopped
 
+  redis:
+    image: ${NEXTCLOUD_REDIS_IMAGE_TAG}
+    command: ["redis-server", "--requirepass", "$NEXTCLOUD_REDIS_PASSWORD"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - nextcloud-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
   nextcloud:
     image: ${NEXTCLOUD_IMAGE_TAG}
     volumes:
@@ -117,6 +133,9 @@ services:
       POSTGRES_DB: ${NEXTCLOUD_DB_NAME}
       POSTGRES_USER: ${NEXTCLOUD_DB_USER}
       POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_HOST_PORT: 6379
+      REDIS_HOST_PASSWORD: ${NEXTCLOUD_REDIS_PASSWORD}
       NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USERNAME}
       NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
       NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_HOSTNAME}
@@ -148,6 +167,8 @@ services:
     restart: unless-stopped
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       traefik:
         condition: service_healthy
