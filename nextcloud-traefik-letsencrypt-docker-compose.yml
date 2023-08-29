@@ -3,7 +3,7 @@
 # The complete installation guide is available on my https://www.heyvaldemar.com/install-nextcloud-using-docker-compose/
 
 # Change variables in the `.env` to meet your requirements.
-# Note that the .env file should be in the same directory as `nextcloud-traefik-letsencrypt-docker-compose.yml`.
+# Note that the `.env` file should be in the same directory as `nextcloud-traefik-letsencrypt-docker-compose.yml`.
 
 # Create networks for your services before deploying the configuration using the commands:
 # `docker network create traefik-network`
