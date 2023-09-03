@@ -15,7 +15,7 @@
 NEXTCLOUD_CONTAINER=$(docker ps -aqf "name=nextcloud-nextcloud")
 NEXTCLOUD_BACKUPS_CONTAINER=$(docker ps -aqf "name=nextcloud-backups")
 BACKUP_PATH="/srv/nextcloud-application-data/backups/"
-RESTORE_PATH="/nextcloud/data/"
+RESTORE_PATH="/var/www/html/"
 BACKUP_PREFIX="nextcloud-application-data"
 
 echo "--> All available application data backups:"
