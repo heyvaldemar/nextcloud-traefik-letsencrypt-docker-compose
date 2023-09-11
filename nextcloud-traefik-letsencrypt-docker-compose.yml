@@ -100,7 +100,7 @@ services:
     networks:
       - nextcloud-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: [ "CMD", "pg_isready", "-q", "-d", "${NEXTCLOUD_DB_NAME}", "-U", "${NEXTCLOUD_DB_USER}" ]
       interval: 10s
       timeout: 5s
       retries: 3
