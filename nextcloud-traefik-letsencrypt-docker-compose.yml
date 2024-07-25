@@ -143,6 +143,7 @@ services:
       OVERWRITECLIURL: ${NEXTCLOUD_URL}
       OVERWRITEPROTOCOL: https
       OVERWRITEHOST: ${NEXTCLOUD_HOSTNAME}
+      TRUSTED_PROXIES: 172.16.0.0/12 192.168.0.0/16 10.0.0.0/8 fc00::/7 fe80::/10 2001:db8::/32
     networks:
       - nextcloud-network
       - traefik-network
