@@ -23,7 +23,7 @@ To ensure your Nextcloud instance operates efficiently, it's important to use th
 ## Steps to Enable Cron:
 
 1. **Log in to Nextcloud as an Administrator.**
-2. Go to **Settings** (click on your user profile in the top right corner and select "Settings").
+2. Go to **Administration settings** (click on your user profile in the top right corner and select "Administration settings").
 3. In the **Administration** section on the left sidebar, select **Basic settings**.
 4. Scroll down to the **Background jobs** section.
 5. Select the **"Cron (Recommended)"** option.
