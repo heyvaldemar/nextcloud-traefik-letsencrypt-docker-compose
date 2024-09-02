@@ -173,6 +173,14 @@ services:
       traefik:
         condition: service_healthy
 
+  nextcloud-cron:
+    image: ${NEXTCLOUD_IMAGE_TAG}
+    entrypoint: /cron.sh
+    volumes:
+      - nextcloud-data:${DATA_PATH}
+    networks:
+      - nextcloud-network
+
   traefik:
     image: ${TRAEFIK_IMAGE_TAG}
     command:
