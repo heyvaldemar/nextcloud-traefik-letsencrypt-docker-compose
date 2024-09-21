@@ -180,6 +180,11 @@ services:
       - "traefik.http.services.nextcloud.loadbalancer.passhostheader=true"
       - "traefik.http.routers.nextcloud.middlewares=compresstraefik"
       - "traefik.http.middlewares.compresstraefik.compress=true"
+      - "traefik.http.middlewares.sts_headers.headers.stsSeconds=15552000"
+      - "traefik.http.middlewares.sts_headers.headers.stsIncludeSubdomains=True"
+      - "traefik.http.middlewares.dav-discovery.replacepathregex.regex=^/.well-known/(card|cal)dav"
+      - "traefik.http.middlewares.dav-discovery.replacepathregex.replacement=/remote.php/dav/"
+      - "traefik.http.routers.nextcloud.middlewares=sts_headers,dav-discovery"
       - "traefik.docker.network=traefik-network"
     restart: unless-stopped
     depends_on:
