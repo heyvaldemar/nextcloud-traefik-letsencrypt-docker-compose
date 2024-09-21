@@ -178,13 +178,12 @@ services:
       - "traefik.http.routers.nextcloud.tls=true"
       - "traefik.http.routers.nextcloud.tls.certresolver=letsencrypt"
       - "traefik.http.services.nextcloud.loadbalancer.passhostheader=true"
-      - "traefik.http.routers.nextcloud.middlewares=compresstraefik"
+      - "traefik.http.routers.nextcloud.middlewares=compresstraefik,sts-headers,dav-discovery"
       - "traefik.http.middlewares.compresstraefik.compress=true"
       - "traefik.http.middlewares.sts-headers.headers.stsSeconds=15552000"
-      - "traefik.http.middlewares.sts-headers.headers.stsIncludeSubdomains=True"
+      - "traefik.http.middlewares.sts-headers.headers.stsIncludeSubdomains=true"
       - "traefik.http.middlewares.dav-discovery.replacepathregex.regex=^/.well-known/(card|cal)dav"
       - "traefik.http.middlewares.dav-discovery.replacepathregex.replacement=/remote.php/dav/"
-      - "traefik.http.routers.nextcloud.middlewares=sts-headers,dav-discovery"
       - "traefik.docker.network=traefik-network"
     restart: unless-stopped
     depends_on:
