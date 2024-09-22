@@ -109,13 +109,9 @@ Run the command below, replacing `nextcloud-container-name` with your container'
 
 `docker exec -u 33 -it nextcloud-container-name php occ db:add-missing-indices`
 
-## Verify Changes
-
 Confirm the indices were added by checking the status:
 
 `docker exec -u 33 -it nextcloud-container-name php occ status`
-
-## Tips
 
 - Operations on large databases can take time; consider scheduling during low-usage periods.
 - Always backup your database before making changes.
