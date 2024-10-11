@@ -69,7 +69,7 @@ This script facilitates the restoration of a database backup:
 
 6. **Start Service**: Restarts the service after the restoration is completed.
 
-To make the `nextcloud-restore-database.shh` script executable, run the following command:
+To make the `nextcloud-restore-database.sh` script executable, run the following command:
 
 `chmod +x nextcloud-restore-database.sh`
 
@@ -115,6 +115,23 @@ Confirm the indices were added by checking the status:
 
 - Operations on large databases can take time; consider scheduling during low-usage periods.
 - Always backup your database before making changes.
+
+# Rescanning Files
+
+When files are added directly to Nextcloud's data directory through methods other than the web interface or sync clients (e.g., via FTP or direct server access), they are not automatically visible in the Nextcloud user interface. This happens because these files bypass Nextcloud's normal indexing process.
+
+To make all manually added files visible in the UI, you can use the `occ files:scan` command to update Nextcloud's file index. This command should be used with care as it can impact server performance, especially on larger installations.
+
+List all running containers to find the one running Nextcloud:
+
+`docker ps`
+
+Run the command below, replacing `nextcloud-container-name` with your container's name. Adjust `33` to the correct user ID if different:
+
+`docker exec -u 33 -it nextcloud-container-name php occ files:scan --all`
+
+- Be aware that this command can significantly affect performance during its execution. It is advisable to run this scan during periods of low user activity.
+- Always ensure that you have up-to-date backups before performing any operations that affect the filesystem or database.
 
 # Author
 
