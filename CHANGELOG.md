@@ -1,0 +1,66 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+_(no unreleased changes yet)_
+
+## [1.0.0] - 2026-08-31
+
+First semver release. Brings this template to the fleet standard established
+in [keycloak-traefik-letsencrypt-docker-compose](https://github.com/heyvaldemar/keycloak-traefik-letsencrypt-docker-compose)
+v1.2.0.
+
+### Security
+
+- **Credentials untracked from git.** The repository previously shipped a
+  tracked `.env` with generated-looking passwords; anyone who deployed
+  without editing it ran production on credentials published on GitHub.
+  `.env` is now gitignored; `.env.example` ships `change_me_*` placeholders
+  with generation commands, and the compose file fails fast via `${VAR:?}`
+  when required secrets are unset.
+- **Nextcloud bumped 29 → 34.0.3** (`nextcloud:34.0.3@sha256:da8a5481…`).
+  Nextcloud 29 is end-of-life and no longer receives security updates.
+  ❗ Existing deployments must upgrade one major at a time (29 → 30 → … → 34);
+  see the README upgrade section before pulling.
+- **Traefik bumped 3.2 → 3.7** (`traefik:3.7@sha256:9c2a54d8…`). Traefik
+  3.2's vendored Docker client cannot talk to Docker Engine 29 — the docker
+  provider fails in a retry loop and the stack silently serves 404s on
+  hosts running current Docker.
+- **Redis bumped 7.2 → 7.4**, **postgres:16 digest pinned** — all four
+  images now pinned by `tag@sha256:digest`.
+
+### Changed
+
+- **Image pins live in the compose file as interpolation defaults**
+  (`x-images` block, `${VAR:-tag@sha256:…}`): `git pull` alone delivers the
+  tested version combination, `.env` carries only secrets and deliberate
+  overrides, and an override set in `.env` still wins.
+- Operational variables (log level, timezone, DB/admin names, backup
+  schedule and paths) now have compose-level defaults — the minimal `.env`
+  is secrets and hostnames only.
+
+### Added
+
+- **Deployment Verification workflow** rebuilt: shellcheck + actionlint
+  lint job; Trivy scans of all four pinned images (SARIF to the Security
+  tab); weekly `check-pin-freshness` job that re-resolves every pinned tag
+  against its registry and compares the pinned Nextcloud version and
+  Traefik minor line against the latest upstream releases; and a
+  deploy-and-test job that stands up the full stack with ephemeral
+  credentials and waits for `status.php` to report `"installed":true`
+  through Traefik — the shipped configuration must produce a working
+  Nextcloud instance, not just started containers. Runs on push, PR,
+  weekly cron, and manual dispatch.
+
+### Fixed
+
+- Shellcheck findings in both restore scripts (`read -r`, removed an unused
+  unquoted variable).
+
+[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/releases/tag/v1.0.0

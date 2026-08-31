@@ -8,7 +8,7 @@
 # 4. **Stop Service**: Temporarily stops the service to ensure data consistency during restoration.
 # 5. **Restore Database**: Executes a sequence of commands to drop the current database, create a new one, and restore it from the selected compressed backup file.
 # 6. **Start Service**: Restarts the service after the restoration is completed.
-# To make the `nextcloud-restore-database.shh` script executable, run the following command:
+# To make the `nextcloud-restore-database.sh` script executable, run the following command:
 # `chmod +x nextcloud-restore-database.sh`
 # Usage of this script ensures a controlled and guided process to restore the database from an existing backup.
 
@@ -16,7 +16,6 @@ NEXTCLOUD_CONTAINER=$(docker ps -aqf "name=nextcloud-nextcloud")
 NEXTCLOUD_BACKUPS_CONTAINER=$(docker ps -aqf "name=nextcloud-backups")
 NEXTCLOUD_DB_NAME="nextclouddb"
 NEXTCLOUD_DB_USER="nextclouddbuser"
-POSTGRES_PASSWORD=$(docker exec $NEXTCLOUD_BACKUPS_CONTAINER printenv PGPASSWORD)
 BACKUP_PATH="/srv/nextcloud-postgres/backups/"
 
 echo "--> All available database backups:"
@@ -30,7 +29,7 @@ echo "--> Copy and paste the backup name from the list above to restore database
 --> Example: nextcloud-postgres-backup-YYYY-MM-DD_hh-mm.gz"
 echo -n "--> "
 
-read SELECTED_DATABASE_BACKUP
+read -r SELECTED_DATABASE_BACKUP
 
 echo "--> $SELECTED_DATABASE_BACKUP was selected"
 

@@ -1,6 +1,6 @@
 # Nextcloud with Let's Encrypt Using Docker Compose
 
-[![Deployment Verification](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/actions/workflows/00-deployment-verification.yml/badge.svg)](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/actions)
+[![Deployment Verification](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml/badge.svg)](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/actions)
 
 The badge displayed on my repository indicates the status of the deployment verification workflow as executed on the latest commit to the main branch.
 
@@ -8,9 +8,11 @@ The badge displayed on my repository indicates the status of the deployment veri
 
 📙 The complete installation guide is available on my [website](https://www.heyvaldemar.com/install-nextcloud-using-docker-compose/).
 
-❗ Change variables in the `.env` to meet your requirements.
+❗ Copy `.env.example` to `.env` and fill in the required values (hostnames, Let's Encrypt email, and generated passwords) before deploying. `.env` is gitignored — it holds your secrets and never belongs in git. Image versions are **not** set in `.env`: the tested `tag@sha256:digest` pins live in the compose file's `x-images` block, so `git pull` alone delivers the version combination this repository has tested. Setting `TRAEFIK_IMAGE_TAG`, `NEXTCLOUD_POSTGRES_IMAGE_TAG`, `NEXTCLOUD_REDIS_IMAGE_TAG`, or `NEXTCLOUD_IMAGE_TAG` in `.env` overrides the default when you deliberately want a different version.
 
 💡 Note that the `.env` file should be in the same directory as `nextcloud-traefik-letsencrypt-docker-compose.yml`.
+
+🔄 **Upgrading an existing deployment:** Nextcloud only supports upgrading one major version at a time. If your instance runs an older major (for example 29), do not jump straight to the pinned version — step through each major by setting `NEXTCLOUD_IMAGE_TAG=nextcloud:30` in `.env`, running `docker compose pull && docker compose up -d`, waiting for the upgrade to finish, then repeating for 31, 32, 33, and 34. Take a database backup before you start. Once you reach the pinned major, remove `NEXTCLOUD_IMAGE_TAG` from `.env` to switch to repo-managed versions.
 
 Create networks for your services before deploying the configuration using the commands:
 

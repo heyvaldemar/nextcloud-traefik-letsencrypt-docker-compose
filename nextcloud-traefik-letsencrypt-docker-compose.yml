@@ -1,3 +1,16 @@
+# Image pins live HERE, as interpolation defaults, so `git pull` (or
+# re-downloading this file) delivers the exact version combination this
+# repository has tested — no .env editing required. Setting the matching
+# variable in .env overrides the default for anyone who wants to pin
+# differently; .env itself carries only secrets and deliberate overrides.
+# CI (Trivy scans, check-pin-freshness, the ephemeral test .env) reads the
+# pins from these four lines — this block is the single source of truth.
+x-images:
+  traefik: &traefik-image ${TRAEFIK_IMAGE_TAG:-traefik:3.7@sha256:9c2a54d87f76f5c2f5f2682c68394af92fb12c0a2686798d6462a3f84bd78eaf}
+  postgres: &postgres-image ${NEXTCLOUD_POSTGRES_IMAGE_TAG:-postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94}
+  redis: &redis-image ${NEXTCLOUD_REDIS_IMAGE_TAG:-redis:7.4@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7}
+  nextcloud: &nextcloud-image ${NEXTCLOUD_IMAGE_TAG:-nextcloud:34.0.3@sha256:da8a54816fca90e2de7cba27e5d476ed00db55ab9aade462f926db8c1463245b}
+
 networks:
   nextcloud-network:
     external: true
@@ -15,17 +28,17 @@ volumes:
 
 services:
   postgres:
-    image: ${NEXTCLOUD_POSTGRES_IMAGE_TAG}
+    image: *postgres-image
     volumes:
       - nextcloud-postgres:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: ${NEXTCLOUD_DB_NAME}
-      POSTGRES_USER: ${NEXTCLOUD_DB_USER}
-      POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
+      POSTGRES_DB: ${NEXTCLOUD_DB_NAME:-nextclouddb}
+      POSTGRES_USER: ${NEXTCLOUD_DB_USER:-nextclouddbuser}
+      POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD:?set in .env - see .env.example for generation command}
     networks:
       - nextcloud-network
     healthcheck:
-      test: [ "CMD", "pg_isready", "-q", "-d", "${NEXTCLOUD_DB_NAME}", "-U", "${NEXTCLOUD_DB_USER}" ]
+      test: [ "CMD", "pg_isready", "-q", "-d", "${NEXTCLOUD_DB_NAME:-nextclouddb}", "-U", "${NEXTCLOUD_DB_USER:-nextclouddbuser}" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -33,7 +46,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: ${NEXTCLOUD_REDIS_IMAGE_TAG}
+    image: *redis-image
     command: ["redis-server", "--requirepass", "$NEXTCLOUD_REDIS_PASSWORD"]
     volumes:
       - redis-data:/data
@@ -48,23 +61,23 @@ services:
     restart: unless-stopped
 
   nextcloud:
-    image: ${NEXTCLOUD_IMAGE_TAG}
+    image: *nextcloud-image
     volumes:
-      - nextcloud-data:${DATA_PATH}
+      - nextcloud-data:${DATA_PATH:-/var/www/html}
     environment:
-      TZ: ${NEXTCLOUD_TIMEZONE}
+      TZ: ${NEXTCLOUD_TIMEZONE:-UTC}
       POSTGRES_HOST: postgres
       DB_PORT: 5432
-      POSTGRES_DB: ${NEXTCLOUD_DB_NAME}
-      POSTGRES_USER: ${NEXTCLOUD_DB_USER}
+      POSTGRES_DB: ${NEXTCLOUD_DB_NAME:-nextclouddb}
+      POSTGRES_USER: ${NEXTCLOUD_DB_USER:-nextclouddbuser}
       POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
       REDIS_HOST: redis
       REDIS_HOST_PORT: 6379
-      REDIS_HOST_PASSWORD: ${NEXTCLOUD_REDIS_PASSWORD}
-      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USERNAME}
-      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
-      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_HOSTNAME}
-      OVERWRITECLIURL: ${NEXTCLOUD_URL}
+      REDIS_HOST_PASSWORD: ${NEXTCLOUD_REDIS_PASSWORD:?set in .env - see .env.example for generation command}
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USERNAME:-nextcloudadmin}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:?set in .env - see .env.example for generation command}
+      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_HOSTNAME:?set in .env - see .env.example}
+      OVERWRITECLIURL: ${NEXTCLOUD_URL:?set in .env - see .env.example}
       OVERWRITEPROTOCOL: https
       OVERWRITEHOST: ${NEXTCLOUD_HOSTNAME}
       TRUSTED_PROXIES: 172.16.0.0/12 192.168.0.0/16 10.0.0.0/8 fc00::/7 fe80::/10 2001:db8::/32
@@ -123,18 +136,18 @@ services:
         condition: service_healthy
 
   nextcloud-cron:
-    image: ${NEXTCLOUD_IMAGE_TAG}
+    image: *nextcloud-image
     entrypoint: /cron.sh
     volumes:
-      - nextcloud-data:${DATA_PATH}
+      - nextcloud-data:${DATA_PATH:-/var/www/html}
     networks:
       - nextcloud-network
 
   traefik:
-    image: ${TRAEFIK_IMAGE_TAG}
+    image: *traefik-image
     command:
       # Set the log level (DEBUG, INFO, WARN, ERROR)
-      - "--log.level=${TRAEFIK_LOG_LEVEL}"
+      - "--log.level=${TRAEFIK_LOG_LEVEL:-WARN}"
       # Enable the built-in API and web-based dashboard
       - "--api.dashboard=true"
       # Enable the /ping endpoint so we can health-check Traefik
@@ -159,7 +172,7 @@ services:
       # Use ACME (Let's Encrypt) to generate/renew certificates via TLS challenge
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
       # The email address used by Let's Encrypt for renewal notices
-      - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL:?set in .env - see .env.example}"
       # The file where ACME certificates are stored inside the container
       - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
       # Enable Prometheus metrics
@@ -188,14 +201,14 @@ services:
       # Enable Traefik for this container.
       - "traefik.enable=true"
       # A router to expose the Traefik dashboard
-      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
+      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_HOSTNAME:?set in .env - see .env.example}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
       - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.dashboard.service=api@internal"
       # Basic Authentication for the Traefik dashboard
       - "traefik.http.routers.dashboard.middlewares=authtraefik"
-      - "traefik.http.middlewares.authtraefik.basicauth.users=${TRAEFIK_BASIC_AUTH}"
+      - "traefik.http.middlewares.authtraefik.basicauth.users=${TRAEFIK_BASIC_AUTH:?set in .env - see .env.example for htpasswd generation}"
       # Specify the internal server port to the dashboard service
       - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
       # Pass the original Host header to the backend
@@ -203,33 +216,37 @@ services:
     restart: unless-stopped
 
   backups:
-    image: ${NEXTCLOUD_POSTGRES_IMAGE_TAG}
+    image: *postgres-image
+    # `$$VAR` / `$$(...)` escapes are required so docker compose does NOT
+    # interpolate these at config time — they are resolved by the container
+    # shell at runtime from the `environment:` block below, where the
+    # compose-level defaults live.
     command: >-
-      sh -c 'sleep $BACKUP_INIT_SLEEP &&
+      sh -c 'sleep "$$BACKUP_INIT_SLEEP" &&
       while true; do
-        pg_dump -h postgres -p 5432 -d $NEXTCLOUD_DB_NAME -U $NEXTCLOUD_DB_USER | gzip > $POSTGRES_BACKUPS_PATH/$POSTGRES_BACKUP_NAME-$(date "+%Y-%m-%d_%H-%M").gz &&
-        tar -zcpf $DATA_BACKUPS_PATH/$DATA_BACKUP_NAME-$(date "+%Y-%m-%d_%H-%M").tar.gz $DATA_PATH &&
-        find $POSTGRES_BACKUPS_PATH -type f -mtime +$POSTGRES_BACKUP_PRUNE_DAYS | xargs rm -f &&
-        find $DATA_BACKUPS_PATH -type f -mtime +$DATA_BACKUP_PRUNE_DAYS | xargs rm -f;
-        sleep $BACKUP_INTERVAL; done'
+        pg_dump -h postgres -p 5432 -d "$$NEXTCLOUD_DB_NAME" -U "$$NEXTCLOUD_DB_USER" | gzip > "$$POSTGRES_BACKUPS_PATH/$$POSTGRES_BACKUP_NAME-$$(date "+%Y-%m-%d_%H-%M").gz" &&
+        tar -zcpf "$$DATA_BACKUPS_PATH/$$DATA_BACKUP_NAME-$$(date "+%Y-%m-%d_%H-%M").tar.gz" "$$DATA_PATH" &&
+        find "$$POSTGRES_BACKUPS_PATH" -type f -mtime "+$$POSTGRES_BACKUP_PRUNE_DAYS" | xargs rm -f &&
+        find "$$DATA_BACKUPS_PATH" -type f -mtime "+$$DATA_BACKUP_PRUNE_DAYS" | xargs rm -f;
+        sleep "$$BACKUP_INTERVAL"; done'
     volumes:
       - nextcloud-postgres-backup:/var/lib/postgresql/data
-      - nextcloud-data:${DATA_PATH}
-      - nextcloud-data-backups:${DATA_BACKUPS_PATH}
-      - nextcloud-database-backups:${POSTGRES_BACKUPS_PATH}
+      - nextcloud-data:${DATA_PATH:-/var/www/html}
+      - nextcloud-data-backups:${DATA_BACKUPS_PATH:-/srv/nextcloud-application-data/backups}
+      - nextcloud-database-backups:${POSTGRES_BACKUPS_PATH:-/srv/nextcloud-postgres/backups}
     environment:
-      NEXTCLOUD_DB_NAME: ${NEXTCLOUD_DB_NAME}
-      NEXTCLOUD_DB_USER: ${NEXTCLOUD_DB_USER}
+      NEXTCLOUD_DB_NAME: ${NEXTCLOUD_DB_NAME:-nextclouddb}
+      NEXTCLOUD_DB_USER: ${NEXTCLOUD_DB_USER:-nextclouddbuser}
       PGPASSWORD: ${NEXTCLOUD_DB_PASSWORD}
-      BACKUP_INIT_SLEEP: ${BACKUP_INIT_SLEEP}
-      BACKUP_INTERVAL: ${BACKUP_INTERVAL}
-      POSTGRES_BACKUP_PRUNE_DAYS: ${POSTGRES_BACKUP_PRUNE_DAYS}
-      DATA_BACKUP_PRUNE_DAYS: ${DATA_BACKUP_PRUNE_DAYS}
-      POSTGRES_BACKUPS_PATH: ${POSTGRES_BACKUPS_PATH}
-      DATA_BACKUPS_PATH: ${DATA_BACKUPS_PATH}
-      DATA_PATH: ${DATA_PATH}
-      POSTGRES_BACKUP_NAME: ${POSTGRES_BACKUP_NAME}
-      DATA_BACKUP_NAME: ${DATA_BACKUP_NAME}
+      BACKUP_INIT_SLEEP: ${BACKUP_INIT_SLEEP:-30m}
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-24h}
+      POSTGRES_BACKUP_PRUNE_DAYS: ${POSTGRES_BACKUP_PRUNE_DAYS:-7}
+      DATA_BACKUP_PRUNE_DAYS: ${DATA_BACKUP_PRUNE_DAYS:-7}
+      POSTGRES_BACKUPS_PATH: ${POSTGRES_BACKUPS_PATH:-/srv/nextcloud-postgres/backups}
+      DATA_BACKUPS_PATH: ${DATA_BACKUPS_PATH:-/srv/nextcloud-application-data/backups}
+      DATA_PATH: ${DATA_PATH:-/var/www/html}
+      POSTGRES_BACKUP_NAME: ${POSTGRES_BACKUP_NAME:-nextcloud-postgres-backup}
+      DATA_BACKUP_NAME: ${DATA_BACKUP_NAME:-nextcloud-application-data-backup}
     networks:
       - nextcloud-network
     restart: unless-stopped

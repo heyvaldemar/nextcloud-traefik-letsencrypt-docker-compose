@@ -29,7 +29,7 @@ echo "--> Copy and paste the backup name from the list above to restore applicat
 --> Example: ${BACKUP_PREFIX}-backup-YYYY-MM-DD_hh-mm.tar.gz"
 echo -n "--> "
 
-read SELECTED_APPLICATION_BACKUP
+read -r SELECTED_APPLICATION_BACKUP
 
 echo "--> $SELECTED_APPLICATION_BACKUP was selected"
 
