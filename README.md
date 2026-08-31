@@ -1,228 +1,233 @@
-# Nextcloud with Let's Encrypt Using Docker Compose
+# Nextcloud + Traefik + Let's Encrypt — Docker Compose
 
-[![Deployment Verification](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml/badge.svg)](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/actions)
+[![Deployment Verification](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-The badge displayed on my repository indicates the status of the deployment verification workflow as executed on the latest commit to the main branch.
+## Contents
 
-**Passing**: This means the most recent commit has successfully passed all deployment checks, confirming that the Docker Compose setup functions correctly as designed.
+- [Why this stack?](#why-this-stack)
+- [Prerequisites](#prerequisites)
+- [Getting started](#getting-started)
+- [Features](#features)
+  - [Typical use cases](#typical-use-cases)
+- [Background jobs via cron](#background-jobs-via-cron)
+- [Supply chain trust](#supply-chain-trust)
+- [Production checklist](#production-checklist)
+- [Backups](#backups)
+- [Restoring backups](#restoring-backups)
+- [Operations](#operations)
+- [Testing](#testing)
+- [Security Notes](#security-notes)
+- [About the maintainer](#about-the-maintainer)
 
-📙 The complete installation guide is available on my [website](https://www.heyvaldemar.com/install-nextcloud-using-docker-compose/).
+This repository deploys **Nextcloud** behind **Traefik** with automatic **Let's Encrypt TLS**, backed by **PostgreSQL** and **Redis**, with a dedicated **cron container** for background jobs, a scheduled **backup container** (database + application data), and companion **restore scripts**. One `docker compose up` away from a production-shaped private cloud at `https://your-domain`.
 
-❗ Copy `.env.example` to `.env` and fill in the required values (hostnames, Let's Encrypt email, and generated passwords) before deploying. `.env` is gitignored — it holds your secrets and never belongs in git. Image versions are **not** set in `.env`: the tested `tag@sha256:digest` pins live in the compose file's `x-images` block, so `git pull` alone delivers the version combination this repository has tested. Setting `TRAEFIK_IMAGE_TAG`, `NEXTCLOUD_POSTGRES_IMAGE_TAG`, `NEXTCLOUD_REDIS_IMAGE_TAG`, or `NEXTCLOUD_IMAGE_TAG` in `.env` overrides the default when you deliberately want a different version.
+📙 Full narrative installation guide on the blog: [heyvaldemar.com/install-nextcloud-using-docker-compose/](https://www.heyvaldemar.com/install-nextcloud-using-docker-compose/).
 
-💡 Note that the `.env` file should be in the same directory as `nextcloud-traefik-letsencrypt-docker-compose.yml`.
+## Why this stack?
 
-🔄 **Upgrading an existing deployment:** Nextcloud only supports upgrading one major version at a time. If your instance runs an older major (for example 29), do not jump straight to the pinned version — step through each major by setting `NEXTCLOUD_IMAGE_TAG=nextcloud:30` in `.env`, running `docker compose pull && docker compose up -d`, waiting for the upgrade to finish, then repeating for 31, 32, 33, and 34. Take a database backup before you start. Once you reach the pinned major, remove `NEXTCLOUD_IMAGE_TAG` from `.env` to switch to repo-managed versions.
+| Need | This stack | Manual install | Nextcloud AIO | Other compose examples |
+|------|-----------|----------------|---------------|------------------------|
+| Ready to deploy in <10 min | ✅ | ❌ hours of setup | ✅ | Often |
+| TLS via Let's Encrypt, auto-renewed | ✅ Traefik ACME built-in | Manual certbot | ✅ | Varies |
+| PostgreSQL + Redis wired with healthchecks | ✅ | Separate installs | ✅ | Varies |
+| Dedicated cron container for background jobs | ✅ | Manual crontab | ✅ | Often missing |
+| Scheduled DB **and** data backups + pruning | ✅ | Manual cron | Borg-based | Rare |
+| Restore scripts included | ✅ two scripts | Manual | ✅ | Rare |
+| Upstream images pinned by `sha256` digest | ✅ | N/A | ❌ floating | Rare |
+| Weekly pin-freshness check in CI | ✅ | N/A | ❌ | Rare |
+| CI-verified install on every push | ✅ waits for `installed:true` | N/A | ❌ | Rare |
+| Credentials via env (never committed) | ✅ | N/A | ✅ | Often committed plaintext |
 
-Create networks for your services before deploying the configuration using the commands:
+Six moving parts (Traefik + Nextcloud + cron + Postgres + Redis + backups). No Kubernetes prerequisites, no manual certificate management.
 
-`docker network create traefik-network`
+## Prerequisites
 
-`docker network create nextcloud-network`
+Before you start, you need:
 
-Deploy Nextcloud using Docker Compose:
+- **A Linux server** with a public IP. Tested on Ubuntu 22.04 LTS+ and Debian 12+. Local Mac/Windows works for dev; production is Linux.
+- **Docker Engine 24+ and Docker Compose 2.20+.** Quick check: `docker version` and `docker compose version`.
+- **A domain you control,** with two `A` records pointing at your server's public IP — one for Nextcloud (e.g. `nextcloud.example.com`), one for the Traefik dashboard (e.g. `traefik.nextcloud.example.com`). DNS must propagate before deploy or the Let's Encrypt TLS-ALPN challenge will fail.
+- **Ports 80 and 443 open** on the server's firewall and not bound by another service.
+- **~2 GB free RAM and 1 free CPU** for the running stack, plus disk sized to the files you plan to store and the backup retention window.
 
-`docker compose -f nextcloud-traefik-letsencrypt-docker-compose.yml -p nextcloud up -d`
+## Getting started
 
-## Background Jobs Using Cron
+```bash
+# 1. Clone
+git clone https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose
+cd nextcloud-traefik-letsencrypt-docker-compose
 
-To ensure your Nextcloud instance operates efficiently, it's important to use the "Cron" method to execute background jobs. A dedicated Docker container has already been set up in your environment to handle these tasks.
+# 2. Create the two Docker networks the stack expects
+docker network create traefik-network
+docker network create nextcloud-network
 
-### Steps to Enable Cron:
+# 3. Copy the environment template and fill in required values
+cp .env.example .env
+$EDITOR .env
+# ^ Required: NEXTCLOUD_DB_PASSWORD, NEXTCLOUD_REDIS_PASSWORD,
+#   NEXTCLOUD_ADMIN_PASSWORD, NEXTCLOUD_HOSTNAME, NEXTCLOUD_URL,
+#   TRAEFIK_HOSTNAME, TRAEFIK_ACME_EMAIL, TRAEFIK_BASIC_AUTH.
+#   See .env.example for generation commands.
 
-1. **Log in to Nextcloud as an Administrator.**
-2. Go to **Administration settings** (click on your user profile in the top right corner and select "Administration settings").
-3. In the **Administration** section on the left sidebar, select **Basic settings**.
-4. Scroll down to the **Background jobs** section.
-5. Select the **"Cron (Recommended)"** option.
+# 4. Deploy
+docker compose -f nextcloud-traefik-letsencrypt-docker-compose.yml -p nextcloud up -d
+```
 
-![nextcloud-cron](https://github.com/user-attachments/assets/1fdbf1af-a250-481d-b3b5-6a6cb98b6c51)
+First boot runs the full Nextcloud installer against Postgres — within a couple of minutes `https://${NEXTCLOUD_HOSTNAME}` serves the login page with a fresh Let's Encrypt certificate. Log in with `NEXTCLOUD_ADMIN_USERNAME` / `NEXTCLOUD_ADMIN_PASSWORD`.
 
-### Why Use Cron?
+### What success looks like
 
-The "Cron" method ensures that background tasks, such as file indexing, notifications, and cleanup operations, run at regular intervals independently of user activity. This method is more reliable and efficient than AJAX or Webcron, particularly for larger or more active instances, as it does not depend on users accessing the site to trigger these tasks. With the dedicated container in your setup, this method keeps your Nextcloud instance responsive and in good health by running these jobs consistently.
+```bash
+# All services should report healthy / up:
+docker compose -f nextcloud-traefik-letsencrypt-docker-compose.yml -p nextcloud ps
+
+# The installer finished:
+curl -fsS "https://${NEXTCLOUD_HOSTNAME}/status.php"
+# Expected: {"installed":true, ... "versionstring":"34.0.3", ...}
+
+# Traefik issued a certificate:
+docker compose -p nextcloud logs traefik | grep -i "adding certificate"
+
+# First backup lands after BACKUP_INIT_SLEEP (default 30m):
+docker compose -p nextcloud logs backups | tail -3
+```
+
+### Common first-deploy issues
+
+- **Cert issuance fails.** DNS hasn't propagated or port 80 isn't reachable from the internet. Confirm with `dig +short ${NEXTCLOUD_HOSTNAME}` and `curl -I http://${NEXTCLOUD_HOSTNAME}` from outside the server.
+- **`docker compose up` fails with `set in .env`.** A required variable is empty; the error names it. Generate values per the comments in `.env.example`.
+- **`network nextcloud-network not found`.** Step 2 was skipped.
+- **`status.php` shows `"installed":false` for a long time.** The installer runs on first boot only; check `docker compose -p nextcloud logs nextcloud` for database connection errors (usually a typo'd `NEXTCLOUD_DB_PASSWORD` after a previous boot already initialized the Postgres volume).
+
+### Apply `.env` or compose-file changes
+
+```bash
+docker compose -f nextcloud-traefik-letsencrypt-docker-compose.yml -p nextcloud up -d --force-recreate
+```
+
+## Features
+
+- **Nextcloud** latest stable (34.0.3) with PostgreSQL 16 backing store and Redis caching/locking.
+- **Traefik v3** reverse proxy with automatic HTTP→HTTPS redirect, Let's Encrypt TLS-ALPN certificate issuance, CalDAV/CardDAV well-known redirects, and HSTS security headers preconfigured.
+- **Dedicated cron container** running Nextcloud background jobs on schedule (see [Background jobs via cron](#background-jobs-via-cron)).
+- **Basic-auth protected Traefik dashboard** on a separate hostname.
+- **Scheduled backups of both the database and application data** with configurable interval, retention, and destination paths.
+- **Two restore scripts** — database and application data — with interactive backup selection.
+- **Healthchecks** on every service with start-order dependencies.
+- **Credentials required at deploy time** — compose fails fast if `.env` is incomplete.
+
+### Typical use cases
+
+- **Private cloud for a family or team** — files, calendars, contacts, photos on your own hardware.
+- **Compliance-constrained file sharing** — data residency requirements that rule out hosted drives.
+- **Small-office groupware** — Nextcloud apps for talk, notes, tasks on one box.
+- **Homelab hub** — pair with the [Keycloak template](https://github.com/heyvaldemar/keycloak-traefik-letsencrypt-docker-compose) for SSO across your services.
+
+## Background jobs via cron
+
+The stack ships a dedicated `nextcloud-cron` container that executes Nextcloud's background jobs (file indexing, notifications, cleanup) every 5 minutes, independent of user activity. After the first login, tell Nextcloud to use it:
+
+1. Log in as an administrator.
+2. **Administration settings** → **Basic settings** → **Background jobs**.
+3. Select **"Cron (Recommended)"**.
+
+Cron is the reliable choice for any instance beyond casual use — AJAX and Webcron both depend on page visits to trigger jobs.
+
+## Supply chain trust
+
+This repository is a **deployment template**, not a custom Docker image. It orchestrates four upstream images:
+
+- [`traefik`](https://hub.docker.com/_/traefik) — reverse proxy, Docker Hub official image
+- [`nextcloud`](https://hub.docker.com/_/nextcloud) — Nextcloud, Docker Hub official image
+- [`postgres`](https://hub.docker.com/_/postgres) — PostgreSQL, Docker Hub official image
+- [`redis`](https://hub.docker.com/_/redis) — Redis, Docker Hub official image
+
+All four are pinned to `tag@sha256:<digest>` as interpolation defaults in the compose file's `x-images` block. Compose pulls by digest, not by tag — and `git pull` alone delivers the version combination this repository has tested, because the pins live in the tracked compose file rather than in your `.env`. Setting an `*_IMAGE_TAG` variable in `.env` overrides the default when you deliberately want a different version.
+
+The weekly `check-pin-freshness` CI job re-resolves each pinned tag against its registry and compares the pinned Nextcloud and Traefik versions against the latest upstream releases — any drift fails the run and notifies the maintainer. CI's **Deployment Verification** workflow runs on every push, pull request, and every Monday at 06:00 UTC. GitHub Actions are pinned by commit SHA; Dependabot's `github-actions` ecosystem keeps those fresh.
+
+## Production checklist
+
+Before exposing this to real users, check every box:
+
+- [ ] **Strong secrets everywhere.** `NEXTCLOUD_DB_PASSWORD`, `NEXTCLOUD_REDIS_PASSWORD`, `NEXTCLOUD_ADMIN_PASSWORD` at 24+ random characters; regenerate the Traefik dashboard BCrypt hash per deployment.
+- [ ] **Enable cron background jobs** in the admin UI (section above).
+- [ ] **Host-mount the backup volumes.** Named volumes die with the host — bind-mount `POSTGRES_BACKUPS_PATH` and `DATA_BACKUPS_PATH` to host paths covered by your off-host backup solution (restic, rclone, Borg, S3 sync).
+- [ ] **Verify Let's Encrypt cert issuance** in the Traefik logs on first start.
+- [ ] **Plan your upgrade path.** Nextcloud upgrades one major at a time — see the upgrade note below before pulling a newer template version onto an old instance.
+- [ ] **Know the restore procedure.** Run both restore scripts against a test environment before you need them in production.
+
+🔄 **Upgrading an existing deployment across majors:** Nextcloud only supports upgrading one major version at a time. If your instance runs an older major (for example 29), do not jump straight to the pinned version — step through each major by setting `NEXTCLOUD_IMAGE_TAG=nextcloud:30` in `.env`, running `docker compose pull && docker compose up -d`, waiting for the upgrade to finish, then repeating for 31, 32, 33, 34. Take a database backup before you start. Once you reach the pinned major, remove `NEXTCLOUD_IMAGE_TAG` from `.env` to switch to repo-managed versions.
 
 ## Backups
 
-The `backups` container in the configuration is responsible for the following:
+The `backups` container performs a dump → archive → prune → sleep loop:
 
-1. **Database Backup**: Creates compressed backups of the PostgreSQL database using pg_dump.
-Customizable backup path, filename pattern, and schedule through variables like `POSTGRES_BACKUPS_PATH`, `POSTGRES_BACKUP_NAME`, and `BACKUP_INTERVAL`.
+1. **Database** — `pg_dump` of the Nextcloud database piped through `gzip`, timestamp-named.
+2. **Application data** — `tar.gz` of the Nextcloud data directory (files, uploads).
+3. **Prune** — deletes database backups older than `POSTGRES_BACKUP_PRUNE_DAYS` and data backups older than `DATA_BACKUP_PRUNE_DAYS` (both default 7).
+4. **Sleep** — waits `BACKUP_INTERVAL` (default 24h) before the next cycle.
 
-2. **Application Data Backup**: Compresses and stores backups of the application data on the same schedule. Controlled via variables such as `DATA_BACKUPS_PATH`, `DATA_BACKUP_NAME`, and `BACKUP_INTERVAL`.
+All knobs are configured via `.env` with compose-level defaults (30-minute warm-up, 24-hour interval, 7-day retention).
 
-3. **Backup Pruning**: Periodically removes backups exceeding a specified age to manage storage. Customizable pruning schedule and age threshold with `POSTGRES_BACKUP_PRUNE_DAYS` and `DATA_BACKUP_PRUNE_DAYS`.
+**Verify backups are running:**
 
-By utilizing this container, consistent and automated backups of the essential components of your instance are ensured. Moreover, efficient management of backup storage and tailored backup routines can be achieved through easy and flexible configuration using environment variables.
+```bash
+docker compose -p nextcloud logs backups | tail -5
+docker compose -p nextcloud exec backups sh -c 'ls -la /srv/nextcloud-postgres/backups/ /srv/nextcloud-application-data/backups/'
+```
 
-## nextcloud-restore-database.sh Description
+## Restoring backups
 
-This script facilitates the restoration of a database backup:
+Two interactive scripts handle the restore flows. Make them executable once (`chmod +x *.sh`), then run from the repository root:
 
-1. **Identify Containers**: It first identifies the service and backups containers by name, finding the appropriate container IDs.
+- **`nextcloud-restore-database.sh`** — lists available database backups, prompts for a selection, stops Nextcloud, drops and recreates the database, restores the chosen dump, and starts Nextcloud again.
+- **`nextcloud-restore-application-data.sh`** — same guided flow for the application-data archives: stops Nextcloud, restores the chosen `tar.gz` over the data directory, starts Nextcloud.
 
-2. **List Backups**: Displays all available database backups located at the specified backup path.
+For a full restore, run the database script first, then the application-data script, then re-scan files if needed (see [Operations](#operations)).
 
-3. **Select Backup**: Prompts the user to copy and paste the desired backup name from the list to restore the database.
+## Operations
 
-4. **Stop Service**: Temporarily stops the service to ensure data consistency during restoration.
+Handy `occ` one-liners for day-2 operation (run as the container's `www-data`):
 
-5. **Restore Database**: Executes a sequence of commands to drop the current database, create a new one, and restore it from the selected compressed backup file.
+```bash
+# Disable the skeleton files copied into new users' accounts:
+docker compose -p nextcloud exec -u www-data nextcloud php occ config:system:set skeletondirectory --value=""
 
-6. **Start Service**: Restarts the service after the restoration is completed.
+# Add missing database indices after upgrades (safe to run anytime):
+docker compose -p nextcloud exec -u www-data nextcloud php occ db:add-missing-indices
 
-To make the `nextcloud-restore-database.sh` script executable, run the following command:
+# Re-scan files after restoring application data or editing files directly:
+docker compose -p nextcloud exec -u www-data nextcloud php occ files:scan --all
+```
 
-`chmod +x nextcloud-restore-database.sh`
+## Testing
 
-Usage of this script ensures a controlled and guided process to restore the database from an existing backup.
+The [Deployment Verification](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml?query=branch%3Amain) workflow runs on every push, pull request, and every Monday at 06:00 UTC:
 
-## nextcloud-restore-application-data.sh Description
+1. **Lint** — shellcheck on both restore scripts, actionlint on the workflow.
+2. **Trivy scans** of all four pinned images (CRITICAL/HIGH, SARIF to the Security tab).
+3. **Pin freshness** (weekly/manual) — digest drift against registries plus release-lag checks for Nextcloud and Traefik.
+4. **Deploy-and-test** — boots the full stack with ephemeral credentials and waits for `status.php` to report `"installed":true` through Traefik — the shipped configuration must produce a working, fully installed Nextcloud, not just started containers — then checks the login page and the Traefik dashboard.
 
-This script is designed to restore the application data:
+A green run is the authoritative proof that the template deploys end-to-end. If your deploy misbehaves, compare the green CI run's logs to your own — most "doesn't work" cases trace to DNS propagation, firewall rules, or a customized `.env`.
 
-1. **Identify Containers**: Similarly to the database restore script, it identifies the service and backups containers by name.
+## Security Notes
 
-2. **List Application Data Backups**: Displays all available application data backups at the specified backup path.
+- Credentials are read from `.env` at deploy time; `.env` is gitignored and compose fails fast on missing required variables.
+- **Pre-rotation advisory.** Releases before v1.0.0 (2026-08-31) shipped a tracked `.env` with generated-looking credential values. Anyone who deployed without changing them should rotate `NEXTCLOUD_DB_PASSWORD`, `NEXTCLOUD_REDIS_PASSWORD`, `NEXTCLOUD_ADMIN_PASSWORD`, and the Traefik dashboard hash.
+- HSTS headers and CalDAV/CardDAV redirects are preconfigured on the Traefik router.
+- Upstream image digests are pinned; the weekly freshness job flags drift loudly.
 
-3. **Select Backup**: Asks the user to copy and paste the desired backup name for application data restoration.
+---
 
-4. **Stop Service**: Stops the service to prevent any conflicts during the restore process.
-
-5. **Restore Application Data**: Removes the current application data and then extracts the selected backup to the appropriate application data path.
-
-6. **Start Service**: Restarts the service after the application data has been successfully restored.
-
-To make the `nextcloud-restore-application-data.sh` script executable, run the following command:
-
-`chmod +x nextcloud-restore-application-data.sh`
-
-By utilizing this script, you can efficiently restore application data from an existing backup while ensuring proper coordination with the running service.
-
-## Disabling Skeleton Directory for New Users
-
-New Nextcloud users typically receive default files and folders upon account creation, which are sourced from the skeleton directory. Disabling this feature can be useful to provide a clean start for users and reduce disk usage. Use the `occ config:system:set` command to set the skeleton directory path to an empty string, effectively disabling the default content for new users.
-
-List all running containers to find the one running Nextcloud:
-
-`docker ps`
-
-Run the command below, replacing `nextcloud-container-name` with your container's name. Adjust `33` to the correct user ID if different:
-
-`docker exec -u 33 -it nextcloud-container-name php occ config:system:set skeletondirectory --value=''`
-
-## Fixing Database Index Issues
-
-Your Nextcloud database might be missing some indexes. This situation can occur because adding indexes to large tables can take considerable time, so they are not added automatically. Running `occ db:add-missing-indices` manually allows these indexes to be added while the instance continues running. Adding these indexes can significantly speed up queries on tables like `filecache` and `systemtag_object_mapping`, which might be missing indexes such as `fs_storage_path_prefix` and `systag_by_objectid`.
-
-List all running containers to find the one running Nextcloud:
-
-`docker ps`
-
-Run the command below, replacing `nextcloud-container-name` with your container's name. Adjust `33` to the correct user ID if different:
-
-`docker exec -u 33 -it nextcloud-container-name php occ db:add-missing-indices`
-
-Confirm the indices were added by checking the status:
-
-`docker exec -u 33 -it nextcloud-container-name php occ status`
-
-- Operations on large databases can take time; consider scheduling during low-usage periods.
-- Always backup your database before making changes.
-
-## Rescanning Files
-
-When files are added directly to Nextcloud's data directory through methods other than the web interface or sync clients (e.g., via FTP or direct server access), they are not automatically visible in the Nextcloud user interface. This happens because these files bypass Nextcloud's normal indexing process.
-
-To make all manually added files visible in the UI, you can use the `occ files:scan` command to update Nextcloud's file index. This command should be used with care as it can impact server performance, especially on larger installations.
-
-List all running containers to find the one running Nextcloud:
-
-`docker ps`
-
-Run the command below, replacing `nextcloud-container-name` with your container's name. Adjust `33` to the correct user ID if different:
-
-`docker exec -u 33 -it nextcloud-container-name php occ files:scan --all`
-
-- Be aware that this command can significantly affect performance during its execution. It is advisable to run this scan during periods of low user activity.
-- Always ensure that you have up-to-date backups before performing any operations that affect the filesystem or database.
-
-## Author
-
-hey everyone,
-
-💾 I’ve been in the IT game for over 20 years, cutting my teeth with some big names like [IBM](https://www.linkedin.com/in/heyvaldemar/), [Thales](https://www.linkedin.com/in/heyvaldemar/), and [Amazon](https://www.linkedin.com/in/heyvaldemar/). These days, I wear the hat of a DevOps Consultant and Team Lead, but what really gets me going is Docker and container technology - I’m kind of obsessed!
-
-💛 I have my own IT [blog](https://www.heyvaldemar.com/), where I’ve built a [community](https://discord.gg/AJQGCCBcqf) of DevOps enthusiasts who share my love for all things Docker, containers, and IT technologies in general. And to make sure everyone can jump on this awesome DevOps train, I write super detailed guides (seriously, they’re foolproof!) that help even newbies deploy and manage complex IT solutions.
-
-🚀 My dream is to empower every single person in the DevOps community to squeeze every last drop of potential out of Docker and container tech.
-
-🐳 As a [Docker Captain](https://www.docker.com/captains/vladimir-mikhalev/), I’m stoked to share my knowledge, experiences, and a good dose of passion for the tech. My aim is to encourage learning, innovation, and growth, and to inspire the next generation of IT whizz-kids to push Docker and container tech to its limits.
-
-Let’s do this together!
-
-## My 2D Portfolio
-
-🕹️ Click into [sre.gg](https://www.sre.gg/) — my virtual space is a 2D pixel-art portfolio inviting you to interact with elements that encapsulate the milestones of my DevOps career.
-
-## My Courses
-
-🎓 Dive into my [comprehensive IT courses](https://www.heyvaldemar.com/courses/) designed for enthusiasts and professionals alike. Whether you're looking to master Docker, conquer Kubernetes, or advance your DevOps skills, my courses provide a structured pathway to enhancing your technical prowess.
-
-🔑 [Each course](https://www.udemy.com/user/heyvaldemar/) is built from the ground up with real-world scenarios in mind, ensuring that you gain practical knowledge and hands-on experience. From beginners to seasoned professionals, there's something here for everyone to elevate their IT skills.
-
-## My Services
-
-💼 Take a look at my [service catalog](https://www.heyvaldemar.com/services/) and find out how we can make your technological life better. Whether it's increasing the efficiency of your IT infrastructure, advancing your career, or expanding your technological horizons — I'm here to help you achieve your goals. From DevOps transformations to building gaming computers — let's make your technology unparalleled!
-
-## Patreon Exclusives
-
-🏆 Join my [Patreon](https://www.patreon.com/heyvaldemar) and dive deep into the world of Docker and DevOps with exclusive content tailored for IT enthusiasts and professionals. As your experienced guide, I offer a range of membership tiers designed to suit everyone from newbies to IT experts.
-
-## My Recommendations
-
-📕 Check out my collection of [essential DevOps books](https://kit.co/heyvaldemar/essential-devops-books)\
-🖥️ Check out my [studio streaming and recording kit](https://kit.co/heyvaldemar/my-studio-streaming-and-recording-kit)\
-📡 Check out my [streaming starter kit](https://kit.co/heyvaldemar/streaming-starter-kit)
-
-## Follow Me
-
-🎬 [YouTube](https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1)\
-🐦 [X / Twitter](https://twitter.com/heyvaldemar)\
-🎨 [Instagram](https://www.instagram.com/heyvaldemar/)\
-🐘 [Mastodon](https://mastodon.social/@heyvaldemar)\
-🧵 [Threads](https://www.threads.net/@heyvaldemar)\
-🎸 [Facebook](https://www.facebook.com/heyvaldemarFB/)\
-🧊 [Bluesky](https://bsky.app/profile/heyvaldemar.bsky.social)\
-🎥 [TikTok](https://www.tiktok.com/@heyvaldemar)\
-💻 [LinkedIn](https://www.linkedin.com/in/heyvaldemar/)\
-📣 [daily.dev Squad](https://app.daily.dev/squads/devopscompass)\
-🧩 [LeetCode](https://leetcode.com/u/heyvaldemar/)\
-🐈 [GitHub](https://github.com/heyvaldemar)
-
-## Community of IT Experts
-
-👾 [Discord](https://discord.gg/AJQGCCBcqf)
-
-## Refill My Coffee Supplies
-
-💖 [PayPal](https://www.paypal.com/paypalme/heyvaldemarCOM)\
-🏆 [Patreon](https://www.patreon.com/heyvaldemar)\
-💎 [GitHub](https://github.com/sponsors/heyvaldemar)\
-🥤 [BuyMeaCoffee](https://www.buymeacoffee.com/heyvaldemar)\
-🍪 [Ko-fi](https://ko-fi.com/heyvaldemar)
-
-🌟 **Bitcoin (BTC):** bc1q2fq0k2lvdythdrj4ep20metjwnjuf7wccpckxc\
-🔹 **Ethereum (ETH):** 0x76C936F9366Fad39769CA5285b0Af1d975adacB8\
-🪙 **Binance Coin (BNB):** bnb1xnn6gg63lr2dgufngfr0lkq39kz8qltjt2v2g6\
-💠 **Litecoin (LTC):** LMGrhx8Jsx73h1pWY9FE8GB46nBytjvz8g
+## About the maintainer
 
 <div align="center">
 
-### Show some 💜 by starring some of the [repositories](https://github.com/heyValdemar?tab=repositories)!
+**Maintained by [Vladimir Mikhalev](https://github.com/heyvaldemar)** — Docker Captain · IBM Champion · AWS Community Builder
 
-![octocat](https://user-images.githubusercontent.com/10498744/210113490-e2fad07f-4488-4da8-a656-b9abbdd8cb26.gif)
+[YouTube](https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1) · [Blog](https://heyvaldemar.com) · [LinkedIn](https://www.linkedin.com/in/heyvaldemar/)
 
 </div>
-
-![footer](https://user-images.githubusercontent.com/10498744/210157572-1fca0242-8af2-46a6-bfa3-666ffd40ebde.svg)
