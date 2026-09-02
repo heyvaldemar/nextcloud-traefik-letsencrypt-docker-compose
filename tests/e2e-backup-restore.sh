@@ -49,8 +49,10 @@ DB_NAME="${NEXTCLOUD_DB_NAME}"
 DB_USER="${NEXTCLOUD_DB_USER}"
 DB_HOST="postgres"
 
-BACKUPS_CONTAINER="$(docker ps -aqf "name=${COMPOSE_PROJECT_NAME}-backups" | head -n 1)"
-DB_CONTAINER="$(docker ps -aqf "name=${COMPOSE_PROJECT_NAME}-postgres-" | head -n 1)"
+# Resolve containers through compose, not by name: a container_name
+# override in the compose file would defeat a docker ps name filter.
+BACKUPS_CONTAINER="$(docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" ps -aq backups | head -n 1)"
+DB_CONTAINER="$(docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" ps -aq postgres | head -n 1)"
 [[ -n "$BACKUPS_CONTAINER" ]] || { echo "error: backups container not found" >&2; exit 1; }
 [[ -n "$DB_CONTAINER" ]] || { echo "error: database container not found" >&2; exit 1; }
 
