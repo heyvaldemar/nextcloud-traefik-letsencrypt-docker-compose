@@ -93,6 +93,9 @@ fail() {
   return 1
 }
 
+# Note: never `grep -q` on a docker logs pipe here - with pipefail, grep
+# exiting early sends docker logs a SIGPIPE and the whole pipeline fails.
+
 # --- Container helpers ---
 
 backups_sh() {
@@ -176,11 +179,11 @@ test_backup_gunzip_ok() {
 
 test_backup_content_valid() {
   [[ -n "$DUMP_HEADER" ]] || { echo "  (binary archive format, header check not applicable)"; return 0; }
-  local newest sample
+  local newest
   newest=$(list_backups | tail -1)
-  sample=$(backups_sh "gunzip -c $newest | head -80")
-  echo "$sample" | grep -qE "$DUMP_HEADER" || { fail "expected dump header ($DUMP_HEADER) in $newest"; return 1; }
-  echo "$sample" | grep -qE "$DUMP_CONTENT" || { fail "expected $DUMP_CONTENT in the first 80 lines of $newest"; return 1; }
+  backups_sh "gunzip -c $newest | head -5" | grep -qE "$DUMP_HEADER" || { fail "expected dump header ($DUMP_HEADER) at the top of $newest"; return 1; }
+  # the preamble (types, functions, SET lines) can run long - search the whole dump
+  backups_sh "gunzip -c $newest | grep -m1 -qE '$DUMP_CONTENT'" || { fail "expected $DUMP_CONTENT somewhere in $newest"; return 1; }
 }
 
 test_data_backup_valid() {
@@ -189,7 +192,7 @@ test_data_backup_valid() {
   local f elapsed=0
   # the data archive is written after the dump and can take a while on a
   # large tree; wait for the loop to report it before judging
-  until docker logs "$BACKUPS_CONTAINER" 2>&1 | grep -qE "Data backup (OK|FAILED)"; do
+  until docker logs "$BACKUPS_CONTAINER" 2>&1 | grep -E "Data backup (OK|FAILED)" > /dev/null; do
     [[ $elapsed -lt 180 ]] || { fail "no data backup result within 180s"; return 1; }
     sleep 3; elapsed=$((elapsed + 3))
   done
@@ -212,16 +215,23 @@ test_backup_failure_detected() {
   docker start "$DB_CONTAINER" > /dev/null
   wait_for_db_ready 90 || { fail "database did not become ready within 90s after restart"; return 1; }
   [[ -n "$failed_files" ]] || { fail "no *.failed file produced during the outage"; return 1; }
-  docker logs "$BACKUPS_CONTAINER" 2>&1 | grep -qi "backup FAILED" || { fail "expected a 'backup FAILED' log line"; return 1; }
+  docker logs "$BACKUPS_CONTAINER" 2>&1 | grep -i "backup FAILED" > /dev/null || { fail "expected a 'backup FAILED' log line"; return 1; }
   echo "  observed failed file: $failed_files"
 }
 
 test_restore_roundtrip() {
   # Proof that restore replaces database state rather than being a no-op:
   # take the earliest backup, add a marker, restore, assert the marker is gone.
-  local baseline before
-  baseline=$(list_backups | head -1)
-  [[ -n "$baseline" ]] || { fail "no baseline backup"; return 1; }
+  # The baseline must postdate the marker collection/table: CI takes its first
+  # backup long before this script runs, and a restore of a pre-marker archive
+  # cannot prove anything about it.
+  local baseline before elapsed=0
+  baseline=$(backups_sh "find ${BACKUPS_PATH} -name '${BACKUP_PREFIX}-*${BACKUP_EXT}' -newer ${BACKUPS_PATH}/.e2e-marker-stamp 2>/dev/null | sort | head -1")
+  while [[ -z "$baseline" && $elapsed -lt $CYCLE_WAIT ]]; do
+    sleep 5; elapsed=$((elapsed + 5))
+    baseline=$(backups_sh "find ${BACKUPS_PATH} -name '${BACKUP_PREFIX}-*${BACKUP_EXT}' -newer ${BACKUPS_PATH}/.e2e-marker-stamp 2>/dev/null | sort | head -1")
+  done
+  [[ -n "$baseline" ]] || { fail "no backup taken after the marker within ${CYCLE_WAIT}s"; return 1; }
   echo "  baseline: $baseline"
   marker_insert
   before=$(marker_count)
@@ -259,6 +269,8 @@ for _ in $(seq 1 40); do
   sleep 3
 done
 [[ "$marker_ok" == 1 ]] || { echo "error: could not create the marker in the database within 120s" >&2; exit 1; }
+# stamp the moment the marker exists; the restore test picks the first backup newer than this
+backups_sh "touch ${BACKUPS_PATH}/.e2e-marker-stamp"
 
 run_test test_env_required
 run_test test_backup_created
