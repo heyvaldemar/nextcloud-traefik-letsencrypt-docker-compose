@@ -164,6 +164,8 @@ Before exposing this to real users, check every box:
 
 The `backups` container performs a dump → archive → prune → sleep loop:
 
+Each cycle logs `Database backup OK: <file> (<bytes> bytes)` or `Database backup FAILED` (the same for the data archive where there is one). A failed dump is kept as `<file>.failed` for diagnosis and never overwrites a good backup — grep the log for `FAILED` from your monitoring.
+
 1. **Database** — `pg_dump` of the Nextcloud database piped through `gzip`, timestamp-named.
 2. **Application data** — `tar.gz` of the Nextcloud data directory (files, uploads).
 3. **Prune** — deletes database backups older than `POSTGRES_BACKUP_PRUNE_DAYS` and data backups older than `DATA_BACKUP_PRUNE_DAYS` (both default 7).

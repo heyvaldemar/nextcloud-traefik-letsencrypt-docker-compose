@@ -225,6 +225,8 @@ jobs:
           NEXTCLOUD_ADMIN_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
           NEXTCLOUD_HOSTNAME=${APP_HOSTNAME}
           NEXTCLOUD_URL=https://${APP_HOSTNAME}
+          BACKUP_INIT_SLEEP=15s
+          BACKUP_INTERVAL=60s
           EOF
           echo "Generated ephemeral .env for CI run"
 
@@ -260,6 +262,20 @@ jobs:
           # shellcheck disable=SC2016
           timeout 2m bash -c 'while ! curl -fskL "https://$APP_HOSTNAME/" -o /dev/null; do sleep 5; done'
           curl -fskL "https://$APP_HOSTNAME/" -o /dev/null -w "Nextcloud front page: %{http_code}\n"
+
+      - name: Verify a backup is produced and valid
+        # The loop logs 'Backup OK' per cycle; CI additionally proves the
+        # artefacts are readable archives with the expected content.
+        run: |
+          # shellcheck disable=SC2016
+          timeout 5m bash -c 'until docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" exec -T backups sh -c "ls /srv/nextcloud-postgres/backups/*.gz" >/dev/null 2>&1; do
+            echo "Waiting for the first backup cycle..."
+            sleep 10
+          done'
+          docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" exec -T backups sh -c 'f=$(ls -t /srv/nextcloud-postgres/backups/*.gz | head -1) && gunzip -t "$f" && gunzip -c "$f" | head -5 | grep -qE "PostgreSQL database dump" && echo "Database backup valid: $f"'
+          docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" exec -T backups sh -c 'f=$(ls -t /srv/nextcloud-application-data/backups/*.tar.gz | head -1) && tar -tzf "$f" >/dev/null && echo "Data backup valid: $f"'
+          docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" logs backups | grep -q "backup OK" || { echo "::error::no 'backup OK' line in the backups log"; exit 1; }
+          docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" logs backups | grep "backup FAILED" && { echo "::error::the backups log reports a failure"; exit 1; } || true
 
       - name: Wait for the Traefik dashboard to be ready
         run: |
