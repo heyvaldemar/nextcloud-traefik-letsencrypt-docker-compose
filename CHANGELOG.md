@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _(no unreleased changes yet)_
 
+## [1.2.0] - 2026-09-02
+
+### Added
+
+- **Resource limits on every service, as `.env`-overridable defaults.**
+  Each service now carries memory and CPU limits plus reservations
+  (`<SERVICE>_MEMORY_LIMIT`, `_CPU_LIMIT`, `_MEMORY_RESERVATION`,
+  `_CPU_RESERVATION`, defaults listed in `.env.example`). Set any of
+  them in `.env` and the override survives every `git pull`. The
+  defaults are what CI boots the stack under, so they are known to be
+  enough for a fresh install; raise a limit if a service is OOM-killed
+  under your real load (`docker inspect` shows `OOMKilled=true`).
+
 ## [1.1.1] - 2026-09-02
 
 ### Fixed
@@ -116,7 +129,8 @@ v1.2.0.
 - Shellcheck findings in both restore scripts (`read -r`, removed an unused
   unquoted variable).
 
-[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/releases/tag/v1.0.0
