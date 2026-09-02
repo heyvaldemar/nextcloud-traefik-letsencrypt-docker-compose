@@ -213,7 +213,18 @@ The [Deployment Verification](https://github.com/heyvaldemar/nextcloud-traefik-l
 3. **Pin freshness** (weekly/manual) — digest drift against registries plus release-lag checks for Nextcloud and Traefik.
 4. **Deploy-and-test** — boots the full stack with ephemeral credentials and waits for `status.php` to report `"installed":true` through Traefik — the shipped configuration must produce a working, fully installed Nextcloud, not just started containers — then checks the login page and the Traefik dashboard.
 
-A green run is the authoritative proof that the template deploys end-to-end. If your deploy misbehaves, compare the green CI run's logs to your own — most "doesn't work" cases trace to DNS propagation, firewall rules, or a customized `.env`.
+A green run is the authoritative proof that the template deploys end-to-end and that its backups restore. If your deploy misbehaves, compare the green CI run's logs to your own — most "doesn't work" cases trace to DNS propagation, firewall rules, or a customized `.env`.
+
+### Backup and restore, proven
+
+`tests/e2e-backup-restore.sh` runs against the live stack and is what CI executes after the HTTPS smoke. The scenario that matters most is the restore roundtrip: insert a marker row, restore the earliest backup, assert the marker is gone — a backup that cannot be restored fails the build. Run it yourself against a running deployment with short intervals in `.env` (`BACKUP_INIT_SLEEP=15s`, `BACKUP_INTERVAL=60s`):
+
+```bash
+chmod +x tests/e2e-backup-restore.sh
+./tests/e2e-backup-restore.sh
+```
+
+It stops the database container briefly to prove failure detection — run it on a staging copy, not on production.
 
 ## Security Notes
 

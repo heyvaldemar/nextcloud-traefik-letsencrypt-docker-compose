@@ -236,8 +236,11 @@ services:
         fi;
         DATA_FILE="$$DATA_BACKUPS_PATH/$$DATA_BACKUP_NAME-$$STAMP.tar.gz";
         echo "[$$(date -Iseconds)] Starting data backup to $$DATA_FILE";
-        if tar -zcpf "$$DATA_FILE" "$$DATA_PATH"; then
-          echo "[$$(date -Iseconds)] Data backup OK: $$DATA_FILE ($$(stat -c %s "$$DATA_FILE") bytes)";
+        # GNU tar exits 1 when a live application changed a file mid-read;
+        # that is a complete, usable archive - only exit 2 is a real failure.
+        tar --warning=no-file-changed --ignore-failed-read -zcpf "$$DATA_FILE" "$$DATA_PATH"; RC=$$?;
+        if [ "$$RC" -eq 0 ] || [ "$$RC" -eq 1 ]; then
+          echo "[$$(date -Iseconds)] Data backup OK: $$DATA_FILE ($$(stat -c %s "$$DATA_FILE") bytes)$$([ "$$RC" -eq 1 ] && echo " - some files changed while being read")";
         else
           echo "[$$(date -Iseconds)] Data backup FAILED - partial file kept as $$DATA_FILE.failed for diagnosis" >&2;
           mv "$$DATA_FILE" "$$DATA_FILE.failed" 2>/dev/null || true;

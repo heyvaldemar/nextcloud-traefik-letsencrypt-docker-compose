@@ -264,18 +264,29 @@ jobs:
           curl -fskL "https://$APP_HOSTNAME/" -o /dev/null -w "Nextcloud front page: %{http_code}\n"
 
       - name: Verify a backup is produced and valid
-        # The loop logs 'Backup OK' per cycle; CI additionally proves the
-        # artefacts are readable archives with the expected content.
+        # Log-driven: the file named in a 'backup OK' line is complete by
+        # definition, so this never races a dump that is still being written.
         run: |
           # shellcheck disable=SC2016
-          timeout 5m bash -c 'until docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" exec -T backups sh -c "ls /srv/nextcloud-postgres/backups/*.gz" >/dev/null 2>&1; do
-            echo "Waiting for the first backup cycle..."
-            sleep 10
-          done'
-          docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" exec -T backups sh -c 'f=$(ls -t /srv/nextcloud-postgres/backups/*.gz | head -1) && gunzip -t "$f" && gunzip -c "$f" | head -5 | grep -qE "PostgreSQL database dump" && echo "Database backup valid: $f"'
-          docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" exec -T backups sh -c 'f=$(ls -t /srv/nextcloud-application-data/backups/*.tar.gz | head -1) && tar -tzf "$f" >/dev/null && echo "Data backup valid: $f"'
-          docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" logs backups | grep -q "backup OK" || { echo "::error::no 'backup OK' line in the backups log"; exit 1; }
-          docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" logs backups | grep "backup FAILED" && { echo "::error::the backups log reports a failure"; exit 1; } || true
+          timeout 6m bash -c 'until docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" logs backups 2>/dev/null | grep -q "Database backup OK"; do echo "Waiting for the first backup cycle..."; sleep 10; done'
+          db=$(docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" logs backups 2>/dev/null | grep "Database backup OK" | tail -1 | sed -E 's/.*Database backup OK: ([^ ]+) .*/\1/')
+          echo "Database backup file: $db"
+          docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" exec -T backups sh -c "gunzip -t '$db' && gunzip -c '$db' | head -5 | grep -qE 'PostgreSQL database dump'" && echo "Database backup valid: $db"
+          # shellcheck disable=SC2016
+          timeout 6m bash -c 'until docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" logs backups 2>/dev/null | grep -qE "Data backup (OK|FAILED)"; do echo "Waiting for the data archive..."; sleep 10; done'
+          data=$(docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" logs backups 2>/dev/null | grep "Data backup OK" | tail -1 | sed -E 's/.*Data backup OK: ([^ ]+) .*/\1/')
+          [ -n "$data" ] || { echo "::error::no 'Data backup OK' line - the data archive failed"; exit 1; }
+          docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" exec -T backups sh -c "tar -tzf '$data' > /dev/null" && echo "Data backup valid: $data"
+          docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" logs backups 2>/dev/null | grep -i "backup FAILED" && { echo "::error::the backups log reports a failure"; exit 1; } || true
+
+      - name: Run the backup/restore end-to-end tests
+        # Seven scenarios against the live stack: required-env guard, backup
+        # produced, readable, valid content, failure detected when the
+        # database is down, restore genuinely replaces state, prune keeps
+        # recent files. Same script a maintainer runs locally.
+        run: |
+          chmod +x tests/e2e-backup-restore.sh
+          ./tests/e2e-backup-restore.sh
 
       - name: Wait for the Traefik dashboard to be ready
         run: |
