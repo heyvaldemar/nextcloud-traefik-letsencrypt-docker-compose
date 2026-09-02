@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _(no unreleased changes yet)_
 
+## [1.1.1] - 2026-09-02
+
+### Fixed
+
+- `tests/e2e-backup-restore.sh` hardened against what the first CI runs
+  across the fleet surfaced: no `grep -q` on a `docker logs` pipe (with
+  `pipefail`, grep exiting early failed the whole pipeline on long
+  logs); the dump content check scans the whole dump instead of its
+  first 80 lines; content and restore are judged on a backup taken
+  after the marker exists; containers are resolved through
+  `docker compose ps -q` so a `container_name` override cannot break
+  the lookup; the fake-old prune file uses `touch -t`, which BusyBox
+  accepts.
+
 ## [1.1.0] - 2026-09-02
 
 ### Fixed
@@ -102,6 +116,7 @@ v1.2.0.
 - Shellcheck findings in both restore scripts (`read -r`, removed an unused
   unquoted variable).
 
-[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/releases/tag/v1.0.0
