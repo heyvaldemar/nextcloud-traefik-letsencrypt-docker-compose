@@ -130,6 +130,17 @@ list_backups() {
   backups_sh "ls -1 ${BACKUPS_PATH}/${BACKUP_PREFIX}-*${BACKUP_EXT} 2>/dev/null" | grep -v '\.failed$' | sort || true
 }
 
+# First backup taken after the marker existed; waits up to one cycle for it.
+post_marker_backup() {
+  local f elapsed=0
+  while :; do
+    f=$(backups_sh "find ${BACKUPS_PATH} -name '${BACKUP_PREFIX}-*${BACKUP_EXT}' -newer ${BACKUPS_PATH}/.e2e-marker-stamp 2>/dev/null | sort | head -1")
+    [[ -n "$f" ]] && { echo "$f"; return 0; }
+    [[ $elapsed -lt $CYCLE_WAIT ]] || return 1
+    sleep 5; elapsed=$((elapsed + 5))
+  done
+}
+
 wait_for_first_backup() {
   local timeout="${1:-180}" elapsed=0
   while [[ $elapsed -lt $timeout ]]; do
@@ -179,8 +190,11 @@ test_backup_gunzip_ok() {
 
 test_backup_content_valid() {
   [[ -n "$DUMP_HEADER" ]] || { echo "  (binary archive format, header check not applicable)"; return 0; }
+  # Judge a backup taken after the marker existed: some applications create
+  # their schema only after the setup wizard, so an early dump is legitimately
+  # empty apart from the marker table.
   local newest
-  newest=$(list_backups | tail -1)
+  newest=$(post_marker_backup) || { fail "no backup taken after the marker within ${CYCLE_WAIT}s"; return 1; }
   backups_sh "gunzip -c $newest | head -5" | grep -qE "$DUMP_HEADER" || { fail "expected dump header ($DUMP_HEADER) at the top of $newest"; return 1; }
   # the preamble (types, functions, SET lines) can run long - search the whole dump
   backups_sh "gunzip -c $newest | grep -m1 -qE '$DUMP_CONTENT'" || { fail "expected $DUMP_CONTENT somewhere in $newest"; return 1; }
@@ -225,13 +239,8 @@ test_restore_roundtrip() {
   # The baseline must postdate the marker collection/table: CI takes its first
   # backup long before this script runs, and a restore of a pre-marker archive
   # cannot prove anything about it.
-  local baseline before elapsed=0
-  baseline=$(backups_sh "find ${BACKUPS_PATH} -name '${BACKUP_PREFIX}-*${BACKUP_EXT}' -newer ${BACKUPS_PATH}/.e2e-marker-stamp 2>/dev/null | sort | head -1")
-  while [[ -z "$baseline" && $elapsed -lt $CYCLE_WAIT ]]; do
-    sleep 5; elapsed=$((elapsed + 5))
-    baseline=$(backups_sh "find ${BACKUPS_PATH} -name '${BACKUP_PREFIX}-*${BACKUP_EXT}' -newer ${BACKUPS_PATH}/.e2e-marker-stamp 2>/dev/null | sort | head -1")
-  done
-  [[ -n "$baseline" ]] || { fail "no backup taken after the marker within ${CYCLE_WAIT}s"; return 1; }
+  local baseline before
+  baseline=$(post_marker_backup) || { fail "no backup taken after the marker within ${CYCLE_WAIT}s"; return 1; }
   echo "  baseline: $baseline"
   marker_insert
   before=$(marker_count)
