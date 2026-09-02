@@ -234,8 +234,9 @@ test_restore_roundtrip() {
 
 test_prune_removes_old() {
   local fake_old="${BACKUPS_PATH}/${BACKUP_PREFIX}-0000-00-00_00-00${BACKUP_EXT}"
-  echo "  placing a fake 400-day-old file at $fake_old"
-  backups_sh "echo fake > $fake_old && touch -d '400 days ago' $fake_old" || { fail "could not create the fake file"; return 1; }
+  echo "  placing a fake file dated 2020 at $fake_old"
+  # touch -t works in GNU and BusyBox alike; -d 'N days ago' is GNU-only
+  backups_sh "echo fake > $fake_old && touch -t 202001010000 $fake_old" || { fail "could not create the fake file"; return 1; }
   echo "  waiting ${CYCLE_WAIT}s for the next prune cycle..."
   sleep "$CYCLE_WAIT"
   if backups_sh "ls $fake_old 2>/dev/null" > /dev/null 2>&1; then fail "fake old file survived the prune cycle"; return 1; fi
