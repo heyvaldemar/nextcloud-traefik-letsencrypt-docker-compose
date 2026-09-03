@@ -217,19 +217,26 @@ test_data_backup_valid() {
 }
 
 test_backup_failure_detected() {
-  # Stop the database so the next cycle cannot dump; the loop must log
-  # FAILED and keep the partial file as .failed. Then bring it back.
+  # Stop the database so the next dump attempt fails; the loop must log
+  # FAILED and keep the partial file as .failed. The data archive of a
+  # large tree can take longer than the interval, so wait for an actual
+  # failed attempt during the outage instead of a fixed cycle time.
+  local failed_before deadline failed_files
+  failed_before=$(docker logs "$BACKUPS_CONTAINER" 2>&1 | grep -ci "backup FAILED" || true)
   echo "  stopping the database to force a failed cycle"
   docker stop "$DB_CONTAINER" > /dev/null
-  echo "  waiting ${CYCLE_WAIT}s for the failed cycle..."
-  sleep "$CYCLE_WAIT"
-  local failed_files
+  deadline=$(( $(date +%s) + CYCLE_WAIT * 2 + 120 ))
+  echo "  waiting up to $(( CYCLE_WAIT * 2 + 120 ))s for a failed dump during the outage..."
+  while [[ $(docker logs "$BACKUPS_CONTAINER" 2>&1 | grep -ci "backup FAILED" || true) -le $failed_before ]]; do
+    if [[ $(date +%s) -ge $deadline ]]; then break; fi
+    sleep 5
+  done
   failed_files=$(backups_sh "ls ${BACKUPS_PATH}/*.failed 2>/dev/null" || true)
   echo "  restarting the database"
   docker start "$DB_CONTAINER" > /dev/null
   wait_for_db_ready 90 || { fail "database did not become ready within 90s after restart"; return 1; }
+  [[ $(docker logs "$BACKUPS_CONTAINER" 2>&1 | grep -ci "backup FAILED" || true) -gt $failed_before ]] || { fail "no 'backup FAILED' log line during the outage"; return 1; }
   [[ -n "$failed_files" ]] || { fail "no *.failed file produced during the outage"; return 1; }
-  docker logs "$BACKUPS_CONTAINER" 2>&1 | grep -i "backup FAILED" > /dev/null || { fail "expected a 'backup FAILED' log line"; return 1; }
   echo "  observed failed file: $failed_files"
 }
 
