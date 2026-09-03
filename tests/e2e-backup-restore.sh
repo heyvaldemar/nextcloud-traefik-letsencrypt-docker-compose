@@ -135,7 +135,9 @@ post_marker_backup() {
   local f elapsed=0
   while :; do
     f=$(backups_sh "find ${BACKUPS_PATH} -name '${BACKUP_PREFIX}-*${BACKUP_EXT}' -newer ${BACKUPS_PATH}/.e2e-marker-stamp 2>/dev/null | sort | head -1")
-    [[ -n "$f" ]] && { echo "$f"; return 0; }
+    # a file that exists is not yet a backup: the loop may still be writing it,
+    # so wait for the "backup OK" log line that names it
+    if [[ -n "$f" ]] && docker logs "$BACKUPS_CONTAINER" 2>&1 | grep -qF "backup OK: $f"; then echo "$f"; return 0; fi
     [[ $elapsed -lt $CYCLE_WAIT ]] || return 1
     sleep 5; elapsed=$((elapsed + 5))
   done
