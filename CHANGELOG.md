@@ -25,6 +25,10 @@ _(no unreleased changes yet)_
   `docker compose up` fails with an invalid reference instead of
   deploying something unexpected.
 
+### Changed
+
+- `nextcloud:34.0.3` re-pinned to the digest upstream now publishes for that tag (a rebuild, same version).
+
 ## [1.3.0] - 2026-09-02
 
 ### Security
