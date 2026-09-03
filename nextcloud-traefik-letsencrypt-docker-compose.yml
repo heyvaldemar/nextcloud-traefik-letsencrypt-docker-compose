@@ -29,6 +29,20 @@ volumes:
 services:
   postgres:
     image: *postgres-image
+    # Hardening: no privilege escalation via setuid binaries
+    security_opt:
+      - no-new-privileges:true
+    # Drop every Linux capability; add back only what this image's
+    # entrypoint needs (bind :80/:443, chown its data directory, drop to
+    # its service user).
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_READ_SEARCH
+      - FOWNER
+      - SETGID
+      - SETUID
     # Resource limits as .env-overridable defaults (e.g. NEXTCLOUD_POSTGRES_MEMORY_LIMIT=2g);
     # the override survives every git pull.
     deploy:
