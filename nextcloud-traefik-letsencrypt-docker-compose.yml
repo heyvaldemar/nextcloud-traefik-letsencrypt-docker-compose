@@ -57,6 +57,19 @@ services:
 
   redis:
     image: *redis-image
+    # Hardening: no privilege escalation via setuid binaries
+    security_opt:
+      - no-new-privileges:true
+    # Drop every Linux capability; add back only what this image's
+    # entrypoint needs (bind :80/:443, chown its data directory, drop to
+    # its service user).
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
     # Resource limits as .env-overridable defaults (e.g. NEXTCLOUD_REDIS_MEMORY_LIMIT=2g);
     # the override survives every git pull.
     deploy:
@@ -82,6 +95,9 @@ services:
 
   nextcloud:
     image: *nextcloud-image
+    # Hardening: no privilege escalation via setuid binaries
+    security_opt:
+      - no-new-privileges:true
     # Resource limits as .env-overridable defaults (e.g. NEXTCLOUD_MEMORY_LIMIT=2g);
     # the override survives every git pull.
     deploy:
@@ -167,6 +183,9 @@ services:
 
   nextcloud-cron:
     image: *nextcloud-image
+    # Hardening: no privilege escalation via setuid binaries
+    security_opt:
+      - no-new-privileges:true
     # Resource limits as .env-overridable defaults (e.g. NEXTCLOUD_CRON_MEMORY_LIMIT=2g);
     # the override survives every git pull.
     deploy:
@@ -185,6 +204,16 @@ services:
 
   traefik:
     image: *traefik-image
+    # Hardening: no privilege escalation via setuid binaries
+    security_opt:
+      - no-new-privileges:true
+    # Drop every Linux capability; add back only what this image's
+    # entrypoint needs (bind :80/:443, chown its data directory, drop to
+    # its service user).
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
     # Resource limits as .env-overridable defaults (e.g. TRAEFIK_MEMORY_LIMIT=2g);
     # the override survives every git pull.
     deploy:
@@ -267,6 +296,18 @@ services:
 
   backups:
     image: *postgres-image
+    # Hardening: no privilege escalation via setuid binaries
+    security_opt:
+      - no-new-privileges:true
+    # Drop every Linux capability; add back only what this image's
+    # entrypoint needs (bind :80/:443, chown its data directory, drop to
+    # its service user).
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
     # Resource limits as .env-overridable defaults (e.g. NEXTCLOUD_BACKUPS_MEMORY_LIMIT=2g);
     # the override survives every git pull.
     deploy:

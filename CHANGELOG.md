@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _(no unreleased changes yet)_
 
+## [1.3.0] - 2026-09-02
+
+### Security
+
+- **Container hardening.** Every service runs with
+  `security_opt: no-new-privileges:true` (no privilege escalation via
+  setuid binaries even if a process escapes its initial capability
+  set). Infrastructure containers (the reverse proxy, databases,
+  caches, backups) drop every Linux capability and add back only what
+  their entrypoints need (bind :80/:443, chown a data directory, drop to
+  the service user). Application containers keep the default capability
+  set: upstream images assume it, and a wrong guess there is a boot loop
+  in production, not a hardening win. CI boots the stack under these
+  settings on every push.
+
 ## [1.2.0] - 2026-09-02
 
 ### Added
@@ -129,7 +144,8 @@ v1.2.0.
 - Shellcheck findings in both restore scripts (`read -r`, removed an unused
   unquoted variable).
 
-[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.0.0...v1.1.0
