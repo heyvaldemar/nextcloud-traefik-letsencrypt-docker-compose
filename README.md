@@ -20,7 +20,7 @@
 - [Security Notes](#security-notes)
 - [About the maintainer](#about-the-maintainer)
 
-This repository deploys **Nextcloud** behind **Traefik** with automatic **Let's Encrypt TLS**, backed by **PostgreSQL** and **Redis**, with a dedicated **cron container** for background jobs, a scheduled **backup container** (database + application data), and companion **restore scripts**. One `docker compose up` away from a production-shaped private cloud at `https://your-domain`.
+This repository deploys Nextcloud behind Traefik with automatic Let's Encrypt TLS, backed by PostgreSQL and Redis, with a dedicated cron container for background jobs, a scheduled backup container (database + application data), and companion restore scripts. One `docker compose up` away from a production-shaped private cloud at `https://your-domain`.
 
 📙 Full narrative installation guide on the blog: [heyvaldemar.com/install-nextcloud-using-docker-compose/](https://www.heyvaldemar.com/install-nextcloud-using-docker-compose/).
 
@@ -129,14 +129,14 @@ docker compose -f nextcloud-traefik-letsencrypt-docker-compose.yml -p nextcloud 
 The stack ships a dedicated `nextcloud-cron` container that executes Nextcloud's background jobs (file indexing, notifications, cleanup) every 5 minutes, independent of user activity. After the first login, tell Nextcloud to use it:
 
 1. Log in as an administrator.
-2. **Administration settings** → **Basic settings** → **Background jobs**.
-3. Select **"Cron (Recommended)"**.
+2. **Administration settings** → Basic settings → Background jobs.
+3. Select "Cron (Recommended)".
 
 Cron is the reliable choice for any instance beyond casual use: AJAX and Webcron both depend on page visits to trigger jobs.
 
 ## Supply chain trust
 
-This repository is a **deployment template**, not a custom Docker image. It orchestrates four upstream images:
+This repository is a deployment template, not a custom Docker image. It orchestrates four upstream images:
 
 - [`traefik`](https://hub.docker.com/_/traefik): reverse proxy, Docker Hub official image
 - [`nextcloud`](https://hub.docker.com/_/nextcloud): Nextcloud, Docker Hub official image
@@ -147,7 +147,7 @@ All four are pinned to `tag@sha256:<digest>` as interpolation defaults in the co
 
 Two override levels exist per image. `<PREFIX>_IMAGE_VERSION` in `.env` swaps only the version of that image (Compose then pulls the tag, without a digest) and leaves every other pin as tested; `<PREFIX>_IMAGE_TAG` replaces the whole reference, digest included. The variable names are listed in `.env.example`. Nested defaults need Docker Compose v2.5 or newer (2022); v2.0 to v2.4 leave the inner `${...}` unexpanded and `docker compose up` fails with an invalid reference instead of deploying something unexpected.
 
-The daily `check-pin-freshness` CI job re-resolves each pinned tag against its registry and compares the pinned Nextcloud and Traefik versions against the latest upstream releases: any drift fails the run and notifies the maintainer. CI's **Deployment Verification** workflow runs on every push, pull request, and every day at 06:00 UTC. GitHub Actions are pinned by commit SHA; Dependabot's `github-actions` ecosystem keeps those fresh.
+The daily `check-pin-freshness` CI job re-resolves each pinned tag against its registry and compares the pinned Nextcloud and Traefik versions against the latest upstream releases: any drift fails the run and notifies the maintainer. CI's Deployment Verification workflow runs on every push, pull request, and every day at 06:00 UTC. GitHub Actions are pinned by commit SHA; Dependabot's `github-actions` ecosystem keeps those fresh.
 
 ## Production checklist
 
@@ -160,7 +160,7 @@ Before exposing this to real users, check every box:
 - [ ] **Plan your upgrade path.** Nextcloud upgrades one major at a time, see the upgrade note below before pulling a newer template version onto an old instance.
 - [ ] **Know the restore procedure.** Run both restore scripts against a test environment before you need them in production.
 
-🔄 **Upgrading an existing deployment across majors:** Nextcloud only supports upgrading one major version at a time. If your instance runs an older major (for example 29), do not jump straight to the pinned version: step through each major by setting `NEXTCLOUD_IMAGE_TAG=nextcloud:30` in `.env`, running `docker compose pull && docker compose up -d`, waiting for the upgrade to finish, then repeating for 31, 32, 33, 34. Take a database backup before you start. Once you reach the pinned major, remove `NEXTCLOUD_IMAGE_TAG` from `.env` to switch to repo-managed versions.
+🔄 Upgrading an existing deployment across majors: Nextcloud only supports upgrading one major version at a time. If your instance runs an older major (for example 29), do not jump straight to the pinned version: step through each major by setting `NEXTCLOUD_IMAGE_TAG=nextcloud:30` in `.env`, running `docker compose pull && docker compose up -d`, waiting for the upgrade to finish, then repeating for 31, 32, 33, 34. Take a database backup before you start. Once you reach the pinned major, remove `NEXTCLOUD_IMAGE_TAG` from `.env` to switch to repo-managed versions.
 
 ## Backups
 
@@ -236,7 +236,7 @@ chmod +x tests/e2e-backup-restore.sh
 
 It stops the database container briefly to prove failure detection. Run it on a staging copy, not on production.
 
-## Security Notes
+## Security notes
 
 - Credentials are read from `.env` at deploy time; `.env` is gitignored and compose fails fast on missing required variables.
 - **Pre-rotation advisory.** Releases before v1.0.0 (2026-08-31) shipped a tracked `.env` with generated-looking credential values. Anyone who deployed without changing them should rotate `NEXTCLOUD_DB_PASSWORD`, `NEXTCLOUD_REDIS_PASSWORD`, `NEXTCLOUD_ADMIN_PASSWORD`, and the Traefik dashboard hash.

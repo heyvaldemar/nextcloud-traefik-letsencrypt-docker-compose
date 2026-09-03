@@ -90,7 +90,7 @@ _(no unreleased changes yet)_
   required-variable guard fires, a backup is produced, it is a readable
   archive with real dump content (and a readable data `tar.gz` where the
   stack has one), a database outage is reported as `FAILED`, **restore
-  genuinely replaces database state** (a marker row inserted after the
+ replaces database state** (a marker row inserted after the
   baseline backup is gone after restoring it), and pruning removes only
   old files.
 
@@ -133,7 +133,7 @@ v1.2.0.
   3.2's vendored Docker client cannot talk to Docker Engine 29: the docker
   provider fails in a retry loop and the stack silently serves 404s on
   hosts running current Docker.
-- **Redis bumped 7.2 → 7.4**, **postgres:16 digest pinned**: all four
+- **Redis bumped 7.2 → 7.4**, postgres:16 digest pinned: all four
   images now pinned by `tag@sha256:digest`.
 
 ### Changed
