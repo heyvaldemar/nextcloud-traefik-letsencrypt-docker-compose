@@ -65,7 +65,7 @@ _(no unreleased changes yet)_
 
 ### Added
 
-- **`tests/e2e-backup-restore.sh`** — seven end-to-end scenarios against
+- **`tests/e2e-backup-restore.sh`**: seven end-to-end scenarios against
   the live stack, run by CI on every push and by you locally: the
   required-variable guard fires, a backup is produced, it is a readable
   archive with real dump content (and a readable data `tar.gz` where the
@@ -110,10 +110,10 @@ v1.2.0.
   ❗ Existing deployments must upgrade one major at a time (29 → 30 → … → 34);
   see the README upgrade section before pulling.
 - **Traefik bumped 3.2 → 3.7** (`traefik:3.7@sha256:9c2a54d8…`). Traefik
-  3.2's vendored Docker client cannot talk to Docker Engine 29 — the docker
+  3.2's vendored Docker client cannot talk to Docker Engine 29: the docker
   provider fails in a retry loop and the stack silently serves 404s on
   hosts running current Docker.
-- **Redis bumped 7.2 → 7.4**, **postgres:16 digest pinned** — all four
+- **Redis bumped 7.2 → 7.4**, **postgres:16 digest pinned**: all four
   images now pinned by `tag@sha256:digest`.
 
 ### Changed
@@ -123,7 +123,7 @@ v1.2.0.
   tested version combination, `.env` carries only secrets and deliberate
   overrides, and an override set in `.env` still wins.
 - Operational variables (log level, timezone, DB/admin names, backup
-  schedule and paths) now have compose-level defaults — the minimal `.env`
+  schedule and paths) now have compose-level defaults: the minimal `.env`
   is secrets and hostnames only.
 
 ### Added
@@ -135,7 +135,7 @@ v1.2.0.
   Traefik minor line against the latest upstream releases; and a
   deploy-and-test job that stands up the full stack with ephemeral
   credentials and waits for `status.php` to report `"installed":true`
-  through Traefik — the shipped configuration must produce a working
+  through Traefik: the shipped configuration must produce a working
   Nextcloud instance, not just started containers. Runs on push, PR,
   weekly cron, and manual dispatch.
 

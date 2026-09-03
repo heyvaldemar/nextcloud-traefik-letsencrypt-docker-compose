@@ -1,4 +1,4 @@
-# Nextcloud + Traefik + Let's Encrypt — Docker Compose
+# Nextcloud + Traefik + Let's Encrypt on Docker Compose
 
 [![Deployment Verification](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -47,7 +47,7 @@ Before you start, you need:
 
 - **A Linux server** with a public IP. Tested on Ubuntu 22.04 LTS+ and Debian 12+. Local Mac/Windows works for dev; production is Linux.
 - **Docker Engine 24+ and Docker Compose 2.20+.** Quick check: `docker version` and `docker compose version`.
-- **A domain you control,** with two `A` records pointing at your server's public IP — one for Nextcloud (e.g. `nextcloud.example.com`), one for the Traefik dashboard (e.g. `traefik.nextcloud.example.com`). DNS must propagate before deploy or the Let's Encrypt TLS-ALPN challenge will fail.
+- **A domain you control,** with two `A` records pointing at your server's public IP: one for Nextcloud (e.g. `nextcloud.example.com`), one for the Traefik dashboard (e.g. `traefik.nextcloud.example.com`). DNS must propagate before deploy or the Let's Encrypt TLS-ALPN challenge will fail.
 - **Ports 80 and 443 open** on the server's firewall and not bound by another service.
 - **~2 GB free RAM and 1 free CPU** for the running stack, plus disk sized to the files you plan to store and the backup retention window.
 
@@ -74,7 +74,7 @@ $EDITOR .env
 docker compose -f nextcloud-traefik-letsencrypt-docker-compose.yml -p nextcloud up -d
 ```
 
-First boot runs the full Nextcloud installer against Postgres — within a couple of minutes `https://${NEXTCLOUD_HOSTNAME}` serves the login page with a fresh Let's Encrypt certificate. Log in with `NEXTCLOUD_ADMIN_USERNAME` / `NEXTCLOUD_ADMIN_PASSWORD`.
+First boot runs the full Nextcloud installer against Postgres: within a couple of minutes `https://${NEXTCLOUD_HOSTNAME}` serves the login page with a fresh Let's Encrypt certificate. Log in with `NEXTCLOUD_ADMIN_USERNAME` / `NEXTCLOUD_ADMIN_PASSWORD`.
 
 ### What success looks like
 
@@ -113,16 +113,16 @@ docker compose -f nextcloud-traefik-letsencrypt-docker-compose.yml -p nextcloud 
 - **Dedicated cron container** running Nextcloud background jobs on schedule (see [Background jobs via cron](#background-jobs-via-cron)).
 - **Basic-auth protected Traefik dashboard** on a separate hostname.
 - **Scheduled backups of both the database and application data** with configurable interval, retention, and destination paths.
-- **Two restore scripts** — database and application data — with interactive backup selection.
+- **Two restore scripts** (database and application data) with interactive backup selection.
 - **Healthchecks** on every service with start-order dependencies.
-- **Credentials required at deploy time** — compose fails fast if `.env` is incomplete.
+- **Credentials required at deploy time**: compose fails fast if `.env` is incomplete.
 
 ### Typical use cases
 
-- **Private cloud for a family or team** — files, calendars, contacts, photos on your own hardware.
-- **Compliance-constrained file sharing** — data residency requirements that rule out hosted drives.
-- **Small-office groupware** — Nextcloud apps for talk, notes, tasks on one box.
-- **Homelab hub** — pair with the [Keycloak template](https://github.com/heyvaldemar/keycloak-traefik-letsencrypt-docker-compose) for SSO across your services.
+- **Private cloud for a family or team**: files, calendars, contacts, photos on your own hardware.
+- **Compliance-constrained file sharing**: data residency requirements that rule out hosted drives.
+- **Small-office groupware**: Nextcloud apps for talk, notes, tasks on one box.
+- **Homelab hub**: pair with the [Keycloak template](https://github.com/heyvaldemar/keycloak-traefik-letsencrypt-docker-compose) for SSO across your services.
 
 ## Background jobs via cron
 
@@ -132,20 +132,20 @@ The stack ships a dedicated `nextcloud-cron` container that executes Nextcloud's
 2. **Administration settings** → **Basic settings** → **Background jobs**.
 3. Select **"Cron (Recommended)"**.
 
-Cron is the reliable choice for any instance beyond casual use — AJAX and Webcron both depend on page visits to trigger jobs.
+Cron is the reliable choice for any instance beyond casual use: AJAX and Webcron both depend on page visits to trigger jobs.
 
 ## Supply chain trust
 
 This repository is a **deployment template**, not a custom Docker image. It orchestrates four upstream images:
 
-- [`traefik`](https://hub.docker.com/_/traefik) — reverse proxy, Docker Hub official image
-- [`nextcloud`](https://hub.docker.com/_/nextcloud) — Nextcloud, Docker Hub official image
-- [`postgres`](https://hub.docker.com/_/postgres) — PostgreSQL, Docker Hub official image
-- [`redis`](https://hub.docker.com/_/redis) — Redis, Docker Hub official image
+- [`traefik`](https://hub.docker.com/_/traefik): reverse proxy, Docker Hub official image
+- [`nextcloud`](https://hub.docker.com/_/nextcloud): Nextcloud, Docker Hub official image
+- [`postgres`](https://hub.docker.com/_/postgres): PostgreSQL, Docker Hub official image
+- [`redis`](https://hub.docker.com/_/redis): Redis, Docker Hub official image
 
-All four are pinned to `tag@sha256:<digest>` as interpolation defaults in the compose file's `x-images` block. Compose pulls by digest, not by tag — and `git pull` alone delivers the version combination this repository has tested, because the pins live in the tracked compose file rather than in your `.env`. Setting an `*_IMAGE_TAG` variable in `.env` overrides the default when you deliberately want a different version.
+All four are pinned to `tag@sha256:<digest>` as interpolation defaults in the compose file's `x-images` block. Compose pulls by digest, not by tag, and `git pull` alone delivers the version combination this repository has tested, because the pins live in the tracked compose file rather than in your `.env`. Setting an `*_IMAGE_TAG` variable in `.env` overrides the default when you deliberately want a different version.
 
-The daily `check-pin-freshness` CI job re-resolves each pinned tag against its registry and compares the pinned Nextcloud and Traefik versions against the latest upstream releases — any drift fails the run and notifies the maintainer. CI's **Deployment Verification** workflow runs on every push, pull request, and every day at 06:00 UTC. GitHub Actions are pinned by commit SHA; Dependabot's `github-actions` ecosystem keeps those fresh.
+The daily `check-pin-freshness` CI job re-resolves each pinned tag against its registry and compares the pinned Nextcloud and Traefik versions against the latest upstream releases: any drift fails the run and notifies the maintainer. CI's **Deployment Verification** workflow runs on every push, pull request, and every day at 06:00 UTC. GitHub Actions are pinned by commit SHA; Dependabot's `github-actions` ecosystem keeps those fresh.
 
 ## Production checklist
 
@@ -153,23 +153,23 @@ Before exposing this to real users, check every box:
 
 - [ ] **Strong secrets everywhere.** `NEXTCLOUD_DB_PASSWORD`, `NEXTCLOUD_REDIS_PASSWORD`, `NEXTCLOUD_ADMIN_PASSWORD` at 24+ random characters; regenerate the Traefik dashboard BCrypt hash per deployment.
 - [ ] **Enable cron background jobs** in the admin UI (section above).
-- [ ] **Host-mount the backup volumes.** Named volumes die with the host — bind-mount `POSTGRES_BACKUPS_PATH` and `DATA_BACKUPS_PATH` to host paths covered by your off-host backup solution (restic, rclone, Borg, S3 sync).
+- [ ] **Host-mount the backup volumes.** Named volumes die with the host. Bind-mount `POSTGRES_BACKUPS_PATH` and `DATA_BACKUPS_PATH` to host paths covered by your off-host backup solution (restic, rclone, Borg, S3 sync).
 - [ ] **Verify Let's Encrypt cert issuance** in the Traefik logs on first start.
-- [ ] **Plan your upgrade path.** Nextcloud upgrades one major at a time — see the upgrade note below before pulling a newer template version onto an old instance.
+- [ ] **Plan your upgrade path.** Nextcloud upgrades one major at a time, see the upgrade note below before pulling a newer template version onto an old instance.
 - [ ] **Know the restore procedure.** Run both restore scripts against a test environment before you need them in production.
 
-🔄 **Upgrading an existing deployment across majors:** Nextcloud only supports upgrading one major version at a time. If your instance runs an older major (for example 29), do not jump straight to the pinned version — step through each major by setting `NEXTCLOUD_IMAGE_TAG=nextcloud:30` in `.env`, running `docker compose pull && docker compose up -d`, waiting for the upgrade to finish, then repeating for 31, 32, 33, 34. Take a database backup before you start. Once you reach the pinned major, remove `NEXTCLOUD_IMAGE_TAG` from `.env` to switch to repo-managed versions.
+🔄 **Upgrading an existing deployment across majors:** Nextcloud only supports upgrading one major version at a time. If your instance runs an older major (for example 29), do not jump straight to the pinned version: step through each major by setting `NEXTCLOUD_IMAGE_TAG=nextcloud:30` in `.env`, running `docker compose pull && docker compose up -d`, waiting for the upgrade to finish, then repeating for 31, 32, 33, 34. Take a database backup before you start. Once you reach the pinned major, remove `NEXTCLOUD_IMAGE_TAG` from `.env` to switch to repo-managed versions.
 
 ## Backups
 
 The `backups` container performs a dump → archive → prune → sleep loop:
 
-Each cycle logs `Database backup OK: <file> (<bytes> bytes)` or `Database backup FAILED` (the same for the data archive where there is one). A failed dump is kept as `<file>.failed` for diagnosis and never overwrites a good backup — grep the log for `FAILED` from your monitoring.
+Each cycle logs `Database backup OK: <file> (<bytes> bytes)` or `Database backup FAILED` (the same for the data archive where there is one). A failed dump is kept as `<file>.failed` for diagnosis and never overwrites a good backup. Grep the log for `FAILED` from your monitoring.
 
-1. **Database** — `pg_dump` of the Nextcloud database piped through `gzip`, timestamp-named.
-2. **Application data** — `tar.gz` of the Nextcloud data directory (files, uploads).
-3. **Prune** — deletes database backups older than `POSTGRES_BACKUP_PRUNE_DAYS` and data backups older than `DATA_BACKUP_PRUNE_DAYS` (both default 7).
-4. **Sleep** — waits `BACKUP_INTERVAL` (default 24h) before the next cycle.
+1. **Database**: `pg_dump` of the Nextcloud database piped through `gzip`, timestamp-named.
+2. **Application data**: `tar.gz` of the Nextcloud data directory (files, uploads).
+3. **Prune**: deletes database backups older than `POSTGRES_BACKUP_PRUNE_DAYS` and data backups older than `DATA_BACKUP_PRUNE_DAYS` (both default 7).
+4. **Sleep**: waits `BACKUP_INTERVAL` (default 24h) before the next cycle.
 
 All knobs are configured via `.env` with compose-level defaults (30-minute warm-up, 24-hour interval, 7-day retention).
 
@@ -184,8 +184,8 @@ docker compose -p nextcloud exec backups sh -c 'ls -la /srv/nextcloud-postgres/b
 
 Two interactive scripts handle the restore flows. Make them executable once (`chmod +x *.sh`), then run from the repository root:
 
-- **`nextcloud-restore-database.sh`** — lists available database backups, prompts for a selection, stops Nextcloud, drops and recreates the database, restores the chosen dump, and starts Nextcloud again.
-- **`nextcloud-restore-application-data.sh`** — same guided flow for the application-data archives: stops Nextcloud, restores the chosen `tar.gz` over the data directory, starts Nextcloud.
+- **`nextcloud-restore-database.sh`**: lists available database backups, prompts for a selection, stops Nextcloud, drops and recreates the database, restores the chosen dump, and starts Nextcloud again.
+- **`nextcloud-restore-application-data.sh`**: same guided flow for the application-data archives: stops Nextcloud, restores the chosen `tar.gz` over the data directory, starts Nextcloud.
 
 For a full restore, run the database script first, then the application-data script, then re-scan files if needed (see [Operations](#operations)).
 
@@ -206,7 +206,7 @@ docker compose -p nextcloud exec -u www-data nextcloud php occ files:scan --all
 
 ## Resource limits
 
-Every service carries memory and CPU limits plus reservations as compose-level defaults — the same values CI boots the stack under. Override any of them in `.env` (the knobs and their defaults are listed in `.env.example`, e.g. `TRAEFIK_MEMORY_LIMIT=512m`) and the override survives every `git pull`. If a service is OOM-killed under real load, `docker inspect <container> --format '{{.State.OOMKilled}}'` says so; raise its `_MEMORY_LIMIT` and recreate.
+Every service carries memory and CPU limits plus reservations as compose-level defaults, the same values CI boots the stack under. Override any of them in `.env` (the knobs and their defaults are listed in `.env.example`, e.g. `TRAEFIK_MEMORY_LIMIT=512m`) and the override survives every `git pull`. If a service is OOM-killed under real load, `docker inspect <container> --format '{{.State.OOMKilled}}'` says so; raise its `_MEMORY_LIMIT` and recreate.
 
 ## Container hardening
 
@@ -216,23 +216,23 @@ Every service runs with `security_opt: no-new-privileges:true`, so a process can
 
 The [Deployment Verification](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml?query=branch%3Amain) workflow runs on every push, pull request, and every day at 06:00 UTC:
 
-1. **Lint** — shellcheck on both restore scripts, actionlint on the workflow.
+1. **Lint**: shellcheck on both restore scripts, actionlint on the workflow.
 2. **Trivy scans** of all four pinned images (CRITICAL/HIGH, SARIF to the Security tab).
-3. **Pin freshness** (daily/manual) — digest drift against registries plus release-lag checks for Nextcloud and Traefik.
-4. **Deploy-and-test** — boots the full stack with ephemeral credentials and waits for `status.php` to report `"installed":true` through Traefik — the shipped configuration must produce a working, fully installed Nextcloud, not just started containers — then checks the login page and the Traefik dashboard.
+3. **Pin freshness** (daily/manual): digest drift against registries plus release-lag checks for Nextcloud and Traefik.
+4. **Deploy-and-test**: boots the full stack with ephemeral credentials and waits for `status.php` to report `"installed":true` through Traefik (the shipped configuration must produce a working, fully installed Nextcloud, not just started containers) then checks the login page and the Traefik dashboard.
 
-A green run is the authoritative proof that the template deploys end-to-end and that its backups restore. If your deploy misbehaves, compare the green CI run's logs to your own — most "doesn't work" cases trace to DNS propagation, firewall rules, or a customized `.env`.
+A green run is the authoritative proof that the template deploys end-to-end and that its backups restore. If your deploy misbehaves, compare the green CI run's logs to your own: most "doesn't work" cases trace to DNS propagation, firewall rules, or a customized `.env`.
 
 ### Backup and restore, proven
 
-`tests/e2e-backup-restore.sh` runs against the live stack and is what CI executes after the HTTPS smoke. The scenario that matters most is the restore roundtrip: insert a marker row, restore the earliest backup, assert the marker is gone — a backup that cannot be restored fails the build. Run it yourself against a running deployment with short intervals in `.env` (`BACKUP_INIT_SLEEP=15s`, `BACKUP_INTERVAL=60s`):
+`tests/e2e-backup-restore.sh` runs against the live stack and is what CI executes after the HTTPS smoke. The scenario that matters most is the restore roundtrip: insert a marker row, restore the earliest backup, assert the marker is gone. A backup that cannot be restored fails the build. Run it yourself against a running deployment with short intervals in `.env` (`BACKUP_INIT_SLEEP=15s`, `BACKUP_INTERVAL=60s`):
 
 ```bash
 chmod +x tests/e2e-backup-restore.sh
 ./tests/e2e-backup-restore.sh
 ```
 
-It stops the database container briefly to prove failure detection — run it on a staging copy, not on production.
+It stops the database container briefly to prove failure detection. Run it on a staging copy, not on production.
 
 ## Security Notes
 
@@ -247,7 +247,7 @@ It stops the database container briefly to prove failure detection — run it on
 
 <div align="center">
 
-**Maintained by [Vladimir Mikhalev](https://github.com/heyvaldemar)** — Docker Captain · IBM Champion · AWS Community Builder
+**Maintained by [Vladimir Mikhalev](https://github.com/heyvaldemar)** · Docker Captain · IBM Champion · AWS Community Builder
 
 [YouTube](https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1) · [Blog](https://heyvaldemar.com) · [LinkedIn](https://www.linkedin.com/in/heyvaldemar/)
 
