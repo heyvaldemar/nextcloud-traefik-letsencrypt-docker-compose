@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _(no unreleased changes yet)_
 
+## [1.6.0] - 2026-09-04
+
+### Fixed
+
+- **A backup interrupted halfway no longer looks like a good one.** The loop
+  already renamed a failed dump to `.failed` so nothing would restore from it,
+  but that rename only runs if the shell lives long enough to reach it. Stop
+  the container mid-dump and it does not: the truncated file keeps the name a
+  finished backup would have, and it is the newest one, which is exactly what
+  the restore script and the end-to-end test pick. Every backup is now written
+  to `<name>.partial` and renamed only after the dump succeeds, so the real
+  name never exists unless the file behind it is complete. Verified by killing
+  a dump in flight: before, the restore path selected a file that failed
+  `gzip -t`; after, it finds nothing to select.
+
 ## [1.5.0] - 2026-09-04
 
 ### Added
@@ -178,7 +193,8 @@ v1.2.0.
 - Shellcheck findings in both restore scripts (`read -r`, removed an unused
   unquoted variable).
 
-[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.2.0...v1.3.0
