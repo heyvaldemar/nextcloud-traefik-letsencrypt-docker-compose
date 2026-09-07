@@ -9,14 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _(no unreleased changes yet)_
 
-## [1.6.0] - 2026-09-04
+## [1.7.0] - 2026-09-07
 
-### Fixed
+### Added
 
-- **A backup interrupted halfway no longer looks like a good one.** The loop
-  already renamed a failed dump to `.failed` so nothing would restore from it,
-  but that rename only runs if the shell lives long enough to reach it. Stop
-  the container mid-dump and it does not: the truncated file keeps the name a
+- **`update.sh`: move between release tags on purpose.** It updates to the latest release (a combination this repository's CI has booted and smoke-tested), refuses to cross a major version unattended, refuses to run over local changes, and names any new required variable before anything has moved. `--dry-run` says what would happen.
+
   finished backup would have, and it is the newest one, which is exactly what
   the restore script and the end-to-end test pick. Every backup is now written
   to `<name>.partial` and renamed only after the dump succeeds, so the real
@@ -193,7 +191,8 @@ v1.2.0.
 - Shellcheck findings in both restore scripts (`read -r`, removed an unused
   unquoted variable).
 
-[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.3.0...v1.4.0
