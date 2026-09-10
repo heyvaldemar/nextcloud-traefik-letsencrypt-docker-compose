@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _(no unreleased changes yet)_
 
+## [1.7.1] - 2026-09-10
+
+### Fixed
+
+- **The archive is read back before it is called a backup.** The library
+  tarball was renamed into place on tar's exit code alone. That code has never
+  been a statement about whether the file it produced opens, and the gap is not
+  theoretical: an archive truncated after tar had already exited still carries
+  exit status 0, and the old condition promoted it, logged `Data backup OK`, and
+  pruned older archives around it. Measured on a bench in the image this sidecar
+  actually runs — a good archive passes, a blocked destination is refused by
+  either condition, and a truncated one is caught only by the read-back.
+
+  One `tar -tzf` between the write and the rename now decides it. The database
+  dump is untouched: it is written as `pg_dump | gzip` under `set -o pipefail`,
+  where a failure at either end of the pipe already fails the pipeline and
+  nothing is renamed.
+
+  Found by a new rule in [fleet-ops](https://github.com/heyvaldemar/fleet-ops)
+  that asserts this property across every repository, written after one loop
+  turned out to be missing it. Eighteen were.
+
 ## [1.7.0] - 2026-09-07
 
 ### Added
@@ -191,7 +213,7 @@ v1.2.0.
 - Shellcheck findings in both restore scripts (`read -r`, removed an unused
   unquoted variable).
 
-[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.7.1...HEAD
 [1.7.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v1.4.0...v1.5.0
