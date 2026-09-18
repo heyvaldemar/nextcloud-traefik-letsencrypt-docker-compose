@@ -9,7 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **`nextcloud:34.0.3` moved to `nextcloud:35.0.0`.** The freshness check reported the lag; the deploy job booted the stack on the new image before this landed.
+- **Nextcloud 35.** A major upstream release, and a one-way one.
+
+  **First boot of the new image runs `occ upgrade` on the database, and there
+  is no path back to 34 once it completes.** That is the whole of the
+  disruption, and it is why this is a major here rather than a minor. The
+  `backups` service in this stack takes the database and data volumes; confirm
+  a recent one exists before pulling this on a live deployment, because that
+  backup is the only way back.
+
+  What was checked rather than assumed: Nextcloud's own system requirements for
+  35 list PostgreSQL 14 through 18, so the `postgres:16` this template pins is
+  inside the supported window and does not move. PHP lives inside the official
+  image and is not this template's concern. 34 to 35 is one major step, which
+  is the only kind of step Nextcloud supports. The upstream review could not
+  read release notes for the range and said so rather than guessing; the deploy
+  job booted the stack on `nextcloud:35.0.0` and answered over HTTPS before
+  this landed.
+
+  After the upgrade, Settings → Administration → Overview may ask for
+  `occ db:add-missing-indices` or `occ maintenance:repair`. Run what it asks
+  for.
 
 ## [1.7.1] - 2026-09-10
 
