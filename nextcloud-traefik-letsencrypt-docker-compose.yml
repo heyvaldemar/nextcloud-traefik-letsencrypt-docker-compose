@@ -6,10 +6,10 @@
 # CI (Trivy scans, check-pin-freshness, the ephemeral test .env) reads the
 # pins from these four lines — this block is the single source of truth.
 x-images:
-  traefik: &traefik-image ${TRAEFIK_IMAGE_TAG:-traefik:${TRAEFIK_IMAGE_VERSION:-3.7@sha256:f86a2cab1b5c649070c49f883c743dd32d8485a56e3368c5f93b9e91f1e91259}}
+  traefik: &traefik-image ${TRAEFIK_IMAGE_TAG:-traefik:${TRAEFIK_IMAGE_VERSION:-3.7@sha256:1c32e7c368204fd72812152ebdd2ac0425993df6fd982317deb02e48f2d5423c}}
   postgres: &postgres-image ${NEXTCLOUD_POSTGRES_IMAGE_TAG:-postgres:${NEXTCLOUD_POSTGRES_IMAGE_VERSION:-16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94}}
   redis: &redis-image ${NEXTCLOUD_REDIS_IMAGE_TAG:-redis:${NEXTCLOUD_REDIS_IMAGE_VERSION:-7.4@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7}}
-  nextcloud: &nextcloud-image ${NEXTCLOUD_IMAGE_TAG:-nextcloud:${NEXTCLOUD_IMAGE_VERSION:-35.0.0@sha256:901b85afe28df992d7b310b8f5dbea12648640b1e162d6b87d2cba37984c0b29}}
+  nextcloud: &nextcloud-image ${NEXTCLOUD_IMAGE_TAG:-nextcloud:${NEXTCLOUD_IMAGE_VERSION:-35.0.0@sha256:3e9f6eaa5dc8e26df3a7b78cd564ec14408f52cdc89d607e5b4341b85ab83f0e}}
 
 networks:
   nextcloud-network:
