@@ -6,7 +6,7 @@
 # CI (Trivy scans, check-pin-freshness, the ephemeral test .env) reads the
 # pins from these four lines — this block is the single source of truth.
 x-images:
-  traefik: &traefik-image ${TRAEFIK_IMAGE_TAG:-traefik:${TRAEFIK_IMAGE_VERSION:-3.7@sha256:1c32e7c368204fd72812152ebdd2ac0425993df6fd982317deb02e48f2d5423c}}
+  traefik: &traefik-image ${TRAEFIK_IMAGE_TAG:-traefik:${TRAEFIK_IMAGE_VERSION:-3.7@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0}}
   postgres: &postgres-image ${NEXTCLOUD_POSTGRES_IMAGE_TAG:-postgres:${NEXTCLOUD_POSTGRES_IMAGE_VERSION:-16@sha256:a3b7f434b2dc57ce85a67e171163eb8ab1a1ebcb39d27484661f26b1dfbe30d6}}
   redis: &redis-image ${NEXTCLOUD_REDIS_IMAGE_TAG:-redis:${NEXTCLOUD_REDIS_IMAGE_VERSION:-7.4@sha256:c6eabf748fc7a61dbb5a705c78bcf3d6377b1127a97d0ce965c11c44ba46896f}}
   nextcloud: &nextcloud-image ${NEXTCLOUD_IMAGE_TAG:-nextcloud:${NEXTCLOUD_IMAGE_VERSION:-35.0.0@sha256:23c101539e295aaf83888c9c1cae7df3fb6ce80b9ea9310248dad46af8c89936}}
