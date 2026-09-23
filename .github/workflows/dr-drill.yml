@@ -48,6 +48,7 @@ jobs:
       DATA_PATH_ENV: "DATA_PATH"
       DB_RESTORE: './nextcloud-restore-database.sh "$F"'
       DATA_RESTORE: './nextcloud-restore-application-data.sh "$F"'
+      DR_DIAG: 'c=$(docker ps -q --filter label=com.docker.compose.service=nextcloud); docker exec -u www-data "$c" php occ status; docker exec "$c" sh -c "tail -n 30 /var/www/html/data/nextcloud.log"'
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -140,6 +141,7 @@ jobs:
       DATA_PATH_ENV: "DATA_PATH"
       DB_RESTORE: './nextcloud-restore-database.sh "$F"'
       DATA_RESTORE: './nextcloud-restore-application-data.sh "$F"'
+      DR_DIAG: 'c=$(docker ps -q --filter label=com.docker.compose.service=nextcloud); docker exec -u www-data "$c" php occ status; docker exec "$c" sh -c "tail -n 30 /var/www/html/data/nextcloud.log"'
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
