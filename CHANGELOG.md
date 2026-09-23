@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [2.0.5] - 2026-09-23
+
 ### Fixed
 
 - **Background jobs stopped after a host reboot.** The `nextcloud-cron` sidecar had no restart policy, so after a reboot or a crash the web interface came back and the cron runner did not: file scans, cleanup and notifications stopped without an error anywhere. It now restarts like every other service.
