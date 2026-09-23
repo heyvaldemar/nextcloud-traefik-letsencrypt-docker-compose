@@ -19,7 +19,7 @@ Please do not open public GitHub issues for security reports.
 
 ## Supply chain trust
 
-This repository publishes a deployment template, not a custom software distribution. Upstream images are pinned by `tag@sha256:<digest>` as interpolation defaults in the compose file's `x-images` block, so a plain `git pull` delivers the exact combination this repository has tested. The Deployment Verification workflow re-resolves every pin daily and boots the full stack on every change; drift or breakage fails the run and notifies the maintainer. GitHub Actions are pinned by commit SHA.
+This repository publishes a deployment template, not a custom software distribution. Upstream images are pinned by `tag@sha256:<digest>` as interpolation defaults in the compose file's `x-images` block, so a plain `git pull` delivers the exact combination this repository has tested. The Pin Freshness workflow re-resolves every pin daily and fails when one has drifted; the Deployment Verification workflow boots the full stack on every change and fails when it breaks. Either one notifies the maintainer. GitHub Actions are pinned by commit SHA.
 
 The README's "Supply chain trust" section lists the upstream images and where they come from.
 
