@@ -12,8 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The restore scripts had never been run by CI, and could not have been.**
   They carried the database name, user and backup directory as literals, found
   their containers with a name filter that misses them under any `-p` but the
-  default, and ran `docker exec -it`, which refuses to start without a
-  terminal. The data restore cleared the directory with `rm -rf dir/*`, which
+  default. The data restore ran `docker exec -it`, which refuses to start
+  without a terminal, and cleared the directory with `rm -rf dir/*`, which
   leaves every dotfile of the newer state in place. Both scripts now take every
   path, name and credential from the running backups container, accept the
   backup file name as an argument, stop the application while they work and
