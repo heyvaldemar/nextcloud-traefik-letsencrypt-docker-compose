@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Fixed
+
+- **A restore onto a new server brought Nextcloud back unable to reach its own database.** The installer creates a dedicated database account (`oc_<admin>`) with a random password and writes it into `config.php`; `pg_dump` saves the data, not the server's accounts. On a rebuilt host the empty stack's installer creates that account again with a different password, the restore brings back the old `config.php`, and every request answers 500 with `password authentication failed for user "oc_admin"`. Restores on the same host never showed it, because there the account already had the right password; a weekly restore onto a machine that had never run the stack did. Both restore scripts now bring the database in line with `config.php` after they run, as the installer would: the account exists, takes the password `config.php` holds, and owns the database.
 
 ## [2.0.6] - 2026-09-23
 

@@ -47,6 +47,34 @@ case "$SELECTED" in ""|*/*) echo "error: give a file name from the list, not a p
 docker exec "$BKP" gunzip -t "$DIR/$SELECTED" >/dev/null \
   || { echo "error: $DIR/$SELECTED is missing or does not open; nothing was changed" >&2; exit 1; }
 
+DB_HOST_FOR_ALIGN="postgres"
+# NEXTCLOUD KEEPS ITS OWN DATABASE ACCOUNT, AND A DUMP DOES NOT CARRY IT.
+# The installer creates an account (oc_<admin>) with a random password and
+# writes both into config.php; pg_dump saves the data, not the server's
+# accounts. On a rebuilt host the empty stack's installer creates that account
+# again with a different password, the restore brings back the old config.php,
+# and Nextcloud answers 500: "password authentication failed for user
+# oc_admin". The same-host tests never saw it, because there the account
+# already had the right password. The clean-machine drill did. So after every
+# restore the database is brought in line with config.php, as the installer
+# would: the account exists, takes config.php's password and owns the database.
+align_nextcloud_account() {
+  docker exec -i -e PGHOST="$DB_HOST_FOR_ALIGN" "$BKP" sh -s <<'SH'
+set -eu
+cfg="$DATA_PATH/config/config.php"
+[ -f "$cfg" ] || { echo "no config.php yet: no account to align"; exit 0; }
+get() { sed -n "s/^ *'$1' => '\(.*\)',\$/\1/p" "$cfg" | head -n 1; }
+u="$(get dbuser)"; p="$(get dbpassword)"; d="$(get dbname)"
+if [ -z "$u" ] || [ -z "$p" ] || [ "$u" = "$NEXTCLOUD_DB_USER" ]; then exit 0; fi
+if [ -z "$(psql -U "$NEXTCLOUD_DB_USER" -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$u'")" ]; then
+  printf '%s\n' 'CREATE ROLE :"u" LOGIN;' | psql -q -v ON_ERROR_STOP=1 -U "$NEXTCLOUD_DB_USER" -d postgres -v u="$u"
+fi
+printf '%s\n' "ALTER ROLE :\"u\" WITH LOGIN PASSWORD :'p';" "ALTER DATABASE :\"d\" OWNER TO :\"u\";" \
+  | psql -q -v ON_ERROR_STOP=1 -U "$NEXTCLOUD_DB_USER" -d postgres -v u="$u" -v p="$p" -v d="$d"
+echo "the database account $u takes config.php's password and owns $d"
+SH
+}
+
 echo "Stopping $APP_SERVICE and $ALSO_STOP so nothing writes while the database is replaced"
 docker stop "$ALSO" "$APP" >/dev/null
 restart() { docker start "$APP" "$ALSO" >/dev/null && echo "Started $APP_SERVICE and $ALSO_STOP"; }
@@ -59,4 +87,5 @@ if ! docker exec "$BKP" sh -c "(set -o pipefail) 2>/dev/null && set -o pipefail;
   echo "error: the restore failed part-way. The database may now be empty: restore another backup before using Nextcloud." >&2
   exit 1
 fi
+align_nextcloud_account
 echo "Restored $SELECTED into $DB_NAME"
