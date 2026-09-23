@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Background jobs stopped after a host reboot.** The `nextcloud-cron` sidecar had no restart policy, so after a reboot or a crash the web interface came back and the cron runner did not: file scans, cleanup and notifications stopped without an error anywhere. It now restarts like every other service.
+
 ### Changed
 
 - **The freshness check has its own workflow, Pin Freshness.** It ran inside Deployment Verification, whose badge is the one at the top of this README. Across the fleet, nine red runs in ten were a pin one version behind - which the fleet's triage moves within the day - and a reader cannot tell that from a stack that does not boot. The badge now says whether the stack boots. The job itself is unchanged.

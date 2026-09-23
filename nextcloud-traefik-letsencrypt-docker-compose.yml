@@ -229,6 +229,9 @@ services:
       - nextcloud-data:${DATA_PATH:-/var/www/html}
     networks:
       - nextcloud-network
+    # Back up on its own after a reboot. Without this the web UI returned
+    # after a restart and every background job silently did not.
+    restart: unless-stopped
 
   traefik:
     image: *traefik-image
