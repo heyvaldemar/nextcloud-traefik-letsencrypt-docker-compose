@@ -191,8 +191,10 @@ docker compose -p nextcloud exec backups sh -c 'ls -la /srv/nextcloud-postgres/b
 
 Two interactive scripts handle the restore flows. Make them executable once (`chmod +x *.sh`), then run from the repository root:
 
-- **`nextcloud-restore-database.sh`**: lists available database backups, prompts for a selection, stops Nextcloud, drops and recreates the database, restores the chosen dump, and starts Nextcloud again.
-- **`nextcloud-restore-application-data.sh`**: same guided flow for the application-data archives: stops Nextcloud, restores the chosen `tar.gz` over the data directory, starts Nextcloud.
+- **`nextcloud-restore-database.sh`**: lists available database backups and prompts for one, or takes a file name as its argument; stops Nextcloud and its cron container, drops and recreates the database, restores the chosen dump, and starts both again.
+- **`nextcloud-restore-application-data.sh`**: same flow for the application-data archives: stops Nextcloud and its cron container, clears the data directory, unpacks the chosen `tar.gz`, and starts both again.
+
+Both read every path and credential from the running backups container, and CI runs both on every push.
 
 For a full restore, run the database script first, then the application-data script, then re-scan files if needed (see [Operations](#operations)).
 
