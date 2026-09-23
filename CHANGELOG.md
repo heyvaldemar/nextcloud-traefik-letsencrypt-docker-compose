@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [2.0.6] - 2026-09-23
+
 ### Fixed
 
 - **The restore scripts had never been run by CI, and could not have been.**
