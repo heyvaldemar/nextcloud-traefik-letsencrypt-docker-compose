@@ -89,6 +89,13 @@ wait_backup_after_stamp() {  # directory variable, suffix, log word
   return 1
 }
 
+explain() {  # what a failed restore looks like from the inside
+  echo "--- what $APP_URL answers:" >&2
+  curl -skL "$APP_URL" | head -c 2000 >&2 || true
+  echo >&2
+  if [ -n "${DR_DIAG:-}" ]; then echo "--- $DR_DIAG" >&2; bash -c "$DR_DIAG" >&2 || true; fi
+}
+
 before() {
   local from_file=".dr-from.yml"
   # The dying host backs up every minute, whatever the copied .env says:
@@ -159,12 +166,8 @@ after() {
     say "restoring the data from $dataf"
     F="$dataf" bash -c "$DATA_RESTORE"
   fi
-  wait_healthy "$DOCKER_COMPOSE_FILE"
-  if ! wait_app 900; then
-    echo "--- what $APP_URL answers:" >&2
-    curl -skL "$APP_URL" | head -c 2000 >&2 || true
-    echo >&2
-    if [ -n "${DR_DIAG:-}" ]; then echo "--- $DR_DIAG" >&2; bash -c "$DR_DIAG" >&2 || true; fi
+  if ! wait_healthy "$DOCKER_COMPOSE_FILE" || ! wait_app 900; then
+    explain
     exit 1
   fi
   t1="$(date +%s)"
