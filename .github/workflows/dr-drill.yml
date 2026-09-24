@@ -53,6 +53,7 @@ jobs:
       DR_DIAG: "c=$(docker ps -q --filter label=com.docker.compose.service=nextcloud); docker exec -u www-data \"$c\" php occ status; docker exec \"$c\" sh -c \"tail -n 30 /var/www/html/data/nextcloud.log\"; docker inspect --format \"{{json .State.Health}}\" \"$c\"; docker logs --tail 60 \"$c\" 2>&1 | grep -v \"GET /\""
       DR_IGNORE_SERVICES: ""
       DR_KEEP: ""
+      DR_APP_WAIT: ""
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -153,6 +154,7 @@ jobs:
       DR_DIAG: "c=$(docker ps -q --filter label=com.docker.compose.service=nextcloud); docker exec -u www-data \"$c\" php occ status; docker exec \"$c\" sh -c \"tail -n 30 /var/www/html/data/nextcloud.log\"; docker inspect --format \"{{json .State.Health}}\" \"$c\"; docker logs --tail 60 \"$c\" 2>&1 | grep -v \"GET /\""
       DR_IGNORE_SERVICES: ""
       DR_KEEP: ""
+      DR_APP_WAIT: ""
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
