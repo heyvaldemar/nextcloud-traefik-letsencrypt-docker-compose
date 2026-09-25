@@ -7,13 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **`nextcloud:35.0.0` moved to `nextcloud:35.0.1`.** The freshness check reported the lag; the deploy job booted the stack on the new image before this landed.
-
-### Security
-
-- **`postgres:16` was rebuilt upstream**; the pin moved from `sha256:a3b7f434b2dc…` to `sha256:1a6ab3f5345e…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
+_(no unreleased changes yet)_
 
 ## [2.0.7] - 2026-09-23
 
