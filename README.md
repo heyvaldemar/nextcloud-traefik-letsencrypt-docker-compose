@@ -110,7 +110,7 @@ docker compose -f nextcloud-traefik-letsencrypt-docker-compose.yml -p nextcloud 
 
 ## Features
 
-- **Nextcloud** latest stable (35.0.1) with PostgreSQL 16 backing store and Redis caching/locking.
+- **Nextcloud** latest stable (35.0.0) with PostgreSQL 16 backing store and Redis caching/locking.
 - **Traefik v3** reverse proxy with automatic HTTP→HTTPS redirect, Let's Encrypt TLS-ALPN certificate issuance, CalDAV/CardDAV well-known redirects, and HSTS security headers preconfigured.
 - **Dedicated cron container** running Nextcloud background jobs on schedule (see [Background jobs via cron](#background-jobs-via-cron)).
 - **Basic-auth protected Traefik dashboard** on a separate hostname.
