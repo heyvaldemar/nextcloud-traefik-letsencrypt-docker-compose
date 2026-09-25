@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [2.0.8] - 2026-09-25
+
 ### Changed
 
 - **`nextcloud:35.0.0` moved to `nextcloud:35.0.1`.** The freshness check reported the lag; the deploy job booted the stack on the new image before this landed.
