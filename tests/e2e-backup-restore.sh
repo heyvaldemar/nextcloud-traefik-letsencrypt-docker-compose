@@ -284,9 +284,17 @@ test_prune_removes_old() {
   echo "  placing a fake file dated 2020 at $fake_old"
   # touch -t works in GNU and BusyBox alike; -d 'N days ago' is GNU-only
   backups_sh "echo fake > $fake_old && touch -t 202001010000 $fake_old" || { fail "could not create the fake file"; return 1; }
-  echo "  waiting ${CYCLE_WAIT}s for the next prune cycle..."
-  sleep "$CYCLE_WAIT"
-  if backups_sh "ls $fake_old 2>/dev/null" > /dev/null 2>&1; then fail "fake old file survived the prune cycle"; return 1; fi
+  # A cycle is a database dump, a data backup that takes as long as the data
+  # does, the prune, then the interval. Nextcloud 35.0.1's data backup took
+  # 98 s on 2026-09-25 and a fixed wait of interval + 60 s asked before the
+  # prune had run. Wait for the prune itself, with a ceiling of two cycles.
+  local ceiling=$(( $(interval_seconds) * 2 + 300 )) waited=0
+  echo "  waiting up to ${ceiling}s for a prune cycle to remove it..."
+  while backups_sh "ls $fake_old 2>/dev/null" > /dev/null 2>&1; do
+    if [ "$waited" -ge "$ceiling" ]; then fail "fake old file survived ${ceiling}s, longer than two backup cycles"; return 1; fi
+    sleep 5; waited=$(( waited + 5 ))
+  done
+  echo "  pruned after ${waited}s"
   [[ -n "$(list_backups)" ]] || { fail "prune removed everything, including recent backups"; return 1; }
 }
 
