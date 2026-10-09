@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [2.1.5] - 2026-10-09
+
 ### Security
 
 - **`traefik:3.7` was rebuilt upstream**; the pin moved from `sha256:b588cb566045…` to `sha256:575fa15b1350…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
@@ -354,7 +358,8 @@ v1.2.0.
 - Shellcheck findings in both restore scripts (`read -r`, removed an unused
   unquoted variable).
 
-[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v2.1.4...HEAD
+[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v2.1.5...HEAD
+[2.1.5]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v2.1.4...v2.1.5
 [2.1.4]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v2.1.1...v2.1.2
