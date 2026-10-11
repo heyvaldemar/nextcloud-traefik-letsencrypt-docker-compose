@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CI fails on an anonymous volume.** A `VOLUME` an image declares and no mount covers becomes an anonymous volume: never backed up, and replaced by an empty one on `down`/`up`. The deployment verification now inspects every container it starts and fails on one, unless `.github/anonymous-volumes` lists it with the reason. GLPI's data lived in exactly such a volume from 2026-08-31 to 2026-10-11.
+
 ### Security
 
 - **`nextcloud:35.0.1` was rebuilt upstream**; the pin moved from `sha256:f4e0ee28ac9e…` to `sha256:8f2f0e93aca5…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
