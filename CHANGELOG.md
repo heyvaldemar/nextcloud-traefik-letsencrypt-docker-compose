@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Security
+
+- **`redis:7.4` was rebuilt upstream**; the pin moved from `sha256:b6b6e3dc0c09…` to `sha256:2e3eb11462c4…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
+- **`postgres:16` was rebuilt upstream**; the pin moved from `sha256:5db6dac2ef5d…` to `sha256:933463a6c8eb…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
 
 ## [2.1.15] - 2026-11-04
 

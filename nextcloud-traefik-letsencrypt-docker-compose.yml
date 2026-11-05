@@ -7,8 +7,8 @@
 # pins from these four lines — this block is the single source of truth.
 x-images:
   traefik: &traefik-image ${TRAEFIK_IMAGE_TAG:-traefik:${TRAEFIK_IMAGE_VERSION:-3.7@sha256:68ae5fe5b64ca166704b746a9e8afcd385e36b3f569a5691401bf652d57b3748}}
-  postgres: &postgres-image ${NEXTCLOUD_POSTGRES_IMAGE_TAG:-postgres:${NEXTCLOUD_POSTGRES_IMAGE_VERSION:-16@sha256:5db6dac2ef5dcff512f4f00a009c3c332b9f2f28f24277175bf3e4a3d02ef83a}}
-  redis: &redis-image ${NEXTCLOUD_REDIS_IMAGE_TAG:-redis:${NEXTCLOUD_REDIS_IMAGE_VERSION:-7.4@sha256:b6b6e3dc0c0952737748e55d5d885272840c7e42ba41ab1d5489f693419882f5}}
+  postgres: &postgres-image ${NEXTCLOUD_POSTGRES_IMAGE_TAG:-postgres:${NEXTCLOUD_POSTGRES_IMAGE_VERSION:-16@sha256:933463a6c8eba2b9f5cd414138738cd8d5519cd2c471214c222652f547a66a32}}
+  redis: &redis-image ${NEXTCLOUD_REDIS_IMAGE_TAG:-redis:${NEXTCLOUD_REDIS_IMAGE_VERSION:-7.4@sha256:2e3eb11462c4e3759e6972678dd051d150ff54b1e60714b3c33b701260172a90}}
   nextcloud: &nextcloud-image ${NEXTCLOUD_IMAGE_TAG:-nextcloud:${NEXTCLOUD_IMAGE_VERSION:-35.0.1@sha256:8f2f0e93aca5e9457019933936dea1f313052e72c696b4aecb31580a208b859f}}
 
 networks:
