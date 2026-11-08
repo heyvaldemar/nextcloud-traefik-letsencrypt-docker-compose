@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [2.1.20] - 2026-11-08
+
 ### Changed
 
 - **`nextcloud:35.0.1` moved to `nextcloud:35.0.2`.** The freshness check reported the lag; the deploy job booted the stack on the new image before this landed.
@@ -454,7 +458,8 @@ v1.2.0.
 - Shellcheck findings in both restore scripts (`read -r`, removed an unused
   unquoted variable).
 
-[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v2.1.19...HEAD
+[Unreleased]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v2.1.20...HEAD
+[2.1.20]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v2.1.19...v2.1.20
 [2.1.19]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v2.1.18...v2.1.19
 [2.1.18]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v2.1.17...v2.1.18
 [2.1.17]: https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/compare/v2.1.16...v2.1.17
