@@ -62,7 +62,9 @@ DB_HOST_FOR_ALIGN="postgres"
 # restore the database is brought in line with config.php, as the installer
 # would: the account exists, takes config.php's password and owns the database.
 align_nextcloud_account() {
-  docker exec -i -e PGHOST="$DB_HOST_FOR_ALIGN" "$BKP" sh -s <<'SH'
+  # Values reach the container by name (-e NAME), never as -e NAME=value:
+  # docker's own arguments are readable by every user on the host with ps.
+  PGHOST="$DB_HOST_FOR_ALIGN" docker exec -i -e PGHOST "$BKP" sh -s <<'SH'
 set -eu
 cfg="$DATA_PATH/config/config.php"
 [ -f "$cfg" ] || { echo "no config.php yet: no account to align"; exit 0; }
@@ -72,8 +74,11 @@ if [ -z "$u" ] || [ -z "$p" ] || [ "$u" = "$NEXTCLOUD_DB_USER" ]; then exit 0; f
 if [ -z "$(psql -U "$NEXTCLOUD_DB_USER" -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$u'")" ]; then
   printf '%s\n' 'CREATE ROLE :"u" LOGIN;' | psql -q -v ON_ERROR_STOP=1 -U "$NEXTCLOUD_DB_USER" -d postgres -v u="$u"
 fi
-printf '%s\n' "ALTER ROLE :\"u\" WITH LOGIN PASSWORD :'p';" "ALTER DATABASE :\"d\" OWNER TO :\"u\";" \
-  | psql -q -v ON_ERROR_STOP=1 -U "$NEXTCLOUD_DB_USER" -d postgres -v u="$u" -v p="$p" -v d="$d"
+# The password goes to psql in its environment and is read with \getenv
+# (psql 15+; this is the postgres image's own psql): as -v p=... it was in
+# psql's arguments, which the host's ps shows for every container.
+printf '%s\n' '\getenv p ALIGN_DB_PASSWORD' "ALTER ROLE :\"u\" WITH LOGIN PASSWORD :'p';" "ALTER DATABASE :\"d\" OWNER TO :\"u\";" \
+  | ALIGN_DB_PASSWORD="$p" psql -q -v ON_ERROR_STOP=1 -U "$NEXTCLOUD_DB_USER" -d postgres -v u="$u" -v d="$d"
 echo "the database account $u takes config.php's password and owns $d"
 SH
 }

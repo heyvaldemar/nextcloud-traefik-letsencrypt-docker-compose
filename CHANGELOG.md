@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Security
+
+- **The restore scripts keep the database password off every command line.** After a restore, `align_nextcloud_account` gave the database account config.php's password with `psql -v p=<password>` inside the backups container: the value was in psql's arguments, and the host's `ps` shows those for every container. psql now reads it from its own environment with `\getenv` (psql 15 and later; the backups container runs the postgres image's psql). The database host reaches `docker exec` by name as well (`-e PGHOST`), not as `-e PGHOST=value`. Fleet conformance flagged the second, now that it checks any value expanded into `-e NAME=`; the first was found reading the same function.
 
 ## [2.1.20] - 2026-11-08
 
