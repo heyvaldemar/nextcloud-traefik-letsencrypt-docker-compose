@@ -11,7 +11,7 @@ Fixes land on `main` and ship as a new tag; older tags are not patched in place.
 
 ## Reporting a vulnerability
 
-Report privately through GitHub: **Security → Report a vulnerability** on this repository (private vulnerability reporting is enabled). Email to v@valdemar.ai also works. The process is described at [heyvaldemar.com/security](https://heyvaldemar.com/security/).
+Report privately through GitHub: [**Security → Report a vulnerability**](https://github.com/heyvaldemar/nextcloud-traefik-letsencrypt-docker-compose/security/advisories/new) on this repository. Email to connect@valdemar.ai also works. The process is described at [heyvaldemar.com/security](https://heyvaldemar.com/security/).
 
 You can expect an acknowledgment within 7 days. This project does not operate a bounty program; researchers who submit valid, responsibly disclosed reports receive public credit in the release notes and the changelog.
 
