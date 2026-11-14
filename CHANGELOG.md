@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`nextcloud:35.0.2` moved to `nextcloud:35.0.3`.** The freshness check reported the lag; the deploy job booted the stack on the new image before this landed.
 
+### Fixed
+
+- **The Redis health check was green with any password.** `redis-cli ping` exits 0 on an error reply, so against `requirepass` the check passed with no password (NOAUTH) and with a wrong one (WRONGPASS), measured on redis 7.4.11. It now takes the password from `REDISCLI_AUTH`, never from its arguments, and passes only on PONG. CI plants a wrong password and waits for Docker to mark Redis unhealthy, and watches every process's command line for the password through the whole run.
+
 ## [2.1.23] - 2026-11-13
 
 ### Security

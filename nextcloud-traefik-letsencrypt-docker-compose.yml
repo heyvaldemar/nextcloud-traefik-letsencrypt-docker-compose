@@ -109,12 +109,20 @@ services:
           memory: ${NEXTCLOUD_REDIS_MEMORY_RESERVATION:-32m}
           cpus: "${NEXTCLOUD_REDIS_CPU_RESERVATION:-0.1}"
     command: ["redis-server", "--requirepass", "$NEXTCLOUD_REDIS_PASSWORD"]
+    # The health check's password. redis-cli reads it from REDISCLI_AUTH, so
+    # it is never in the check's arguments, which the host's ps shows every
+    # time the check runs.
+    environment:
+      REDISCLI_AUTH: ${NEXTCLOUD_REDIS_PASSWORD}
     volumes:
       - redis-data:/data
     networks:
       - nextcloud-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      # redis-cli exits 0 on an error reply: with no password or a wrong one it
+      # prints NOAUTH or WRONGPASS and still exits 0, so the check reads the
+      # reply, not the exit code.
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 3

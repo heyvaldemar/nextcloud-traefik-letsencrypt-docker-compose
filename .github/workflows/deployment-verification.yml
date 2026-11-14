@@ -163,6 +163,16 @@ jobs:
           EOF
           echo "Generated ephemeral .env for CI run"
 
+      - name: Write the secret values the command-line checks look for
+        # The Redis password, in a file only this job reads. The sampler and
+        # the Redis test read it with grep -F -f and never print a value.
+        run: |
+          umask 077
+          values="$RUNNER_TEMP/secret-values"
+          grep -E '^NEXTCLOUD_REDIS_PASSWORD=' .env | cut -d= -f2- > "$values"
+          [ -s "$values" ] || { echo "::error::no Redis password in the generated .env"; exit 1; }
+          echo "SECRET_VALUES=$values" >> "$GITHUB_ENV"
+
       - name: Upgrade drill — the previous release comes up first, on the volumes this run will upgrade
         # A fresh stack proves the new image starts. It proves nothing about the
         # data a deployed host already has: whether the new database image accepts
@@ -204,6 +214,23 @@ jobs:
           docker compose -f .upgrade-drill-previous.yml -p "$COMPOSE_PROJECT_NAME" down
           rm -f .upgrade-drill-previous.yml
           echo "the start below is now an upgrade from $prev"
+
+      - name: Start the command-line sampler (every process, five times a second, until the suite ends)
+        # Every process's arguments are in the host's /proc/*/cmdline, the
+        # containers' included, and any account reads them with ps. The
+        # sampler proves on itself that it sees a planted value, then watches
+        # this whole suite for the Redis password; the last step judges it.
+        run: |
+          install -d -m 700 "$RUNNER_TEMP/cmdline"
+          # shellcheck disable=SC2024  # the log belongs to the runner on purpose; root only writes to it
+          sudo nohup bash tests/cmdline-sampler.sh run "$SECRET_VALUES" "$RUNNER_TEMP/cmdline" \
+            < /dev/null > "$RUNNER_TEMP/cmdline-sampler.log" 2>&1 &
+          for _ in $(seq 1 20); do
+            [ -s "$RUNNER_TEMP/cmdline/selftest" ] && break
+            sleep 0.5
+          done
+          echo "sampler self-test: $(cat "$RUNNER_TEMP/cmdline/selftest" 2>/dev/null || echo none)"
+          grep -qx ok "$RUNNER_TEMP/cmdline/selftest"
 
       - name: Start up services using Docker Compose
         run: docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" up -d
@@ -286,6 +313,23 @@ jobs:
           chmod +x tests/e2e-backup-restore.sh
           ./tests/e2e-backup-restore.sh
 
+      - name: The Redis health check is healthy only with the password Redis requires
+        # redis-cli exits 0 on NOAUTH and on WRONGPASS (redis 7.4.11), so the
+        # old bare `redis-cli ping` was green with no password or a wrong one.
+        # This plants a wrong REDISCLI_AUTH and waits for Docker to mark Redis
+        # unhealthy, puts the right one back, runs the check with no password,
+        # and holds a check in flight to read its command line.
+        env:
+          REDIS_SERVICE: redis
+          REDIS_PLANT: env
+        run: bash tests/e2e-redis-healthcheck.sh
+
+      - name: Nextcloud still answers after its Redis was recreated
+        run: |
+          # shellcheck disable=SC2016
+          timeout 3m bash -c 'until curl -fsk "https://$APP_HOSTNAME/status.php" | grep -q "\"installed\":true"; do sleep 5; done'
+          curl -fskL "https://$APP_HOSTNAME/" -o /dev/null -w "Nextcloud front page: %{http_code}\n"
+
       - name: Wait for the Traefik dashboard to be ready
         run: |
           # shellcheck disable=SC2016
@@ -293,6 +337,10 @@ jobs:
             echo "Waiting for the dashboard to be ready..."
             sleep 10
           done'
+
+      - name: No process held the Redis password on its command line during the suite
+        if: always() && env.SECRET_VALUES != ''
+        run: bash tests/cmdline-sampler.sh judge "$SECRET_VALUES" "$RUNNER_TEMP/cmdline"
 
       - name: Show container logs on failure
         if: failure()
