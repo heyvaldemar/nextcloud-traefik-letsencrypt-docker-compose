@@ -29,7 +29,9 @@
 #   REDIS_PLANT    how the wrong password is planted. "env" (the default)
 #                  recreates the service with another REDISCLI_AUTH.
 #                  "file:<path>" overwrites, in place, the mounted password
-#                  file the check reads (Redis read it once, at start).
+#                  file the check reads (Redis read it once, at start). It
+#                  writes through sudo tee: once the stack is up, another
+#                  container may own the file.
 #
 # It prints names, exit codes and the first word of a reply, never a value.
 # Linux only: it reads /proc and signals Redis through sudo.
@@ -61,6 +63,9 @@ wait_health() {    # wait_health <status> <seconds>
   done
 }
 rc_of() { local rc=0; "$@" >/dev/null 2>&1 || rc=$?; echo "$rc"; }
+# Writes stdin into the password file in place (same inode, so the bind mount
+# sees it); the value never reaches an argument list.
+put_pw() { sudo tee "$pwfile" > /dev/null; }
 
 # Put things back however this ends: Redis running, the right password where
 # the check reads it, no planted file left behind.
@@ -69,7 +74,7 @@ override="" saved=""
 cleanup() {
   if [ -n "$stopped" ]; then sudo kill -CONT "$stopped" 2>/dev/null || true; fi
   if [ "$planted" = env ]; then dc up -d --no-deps --force-recreate "$service" >/dev/null 2>&1 || true; fi
-  if [ "$planted" = file ]; then cat "$saved" > "$pwfile" || true; fi
+  if [ "$planted" = file ]; then put_pw < "$saved" || true; fi
   if [ -n "$override" ]; then rm -f "$override"; fi
   if [ -n "$saved" ]; then rm -f "$saved"; fi
 }
@@ -130,9 +135,10 @@ if [ "$plant" = env ]; then
   echo "planted: $service recreated with a wrong REDISCLI_AUTH"
 else
   saved=$(mktemp "${RUNNER_TEMP:-/tmp}/redis-pw.XXXXXX")
-  cat "$pwfile" > "$saved"
+  # shellcheck disable=SC2024  # the copy belongs to this user on purpose; sudo only reads
+  sudo cat "$pwfile" > "$saved"
   planted="file"
-  printf '%s' "$wrong" > "$pwfile"
+  printf '%s' "$wrong" | put_pw
   echo "planted: a wrong password in $pwfile (Redis keeps the one it read at start)"
 fi
 sleep 3
@@ -160,7 +166,7 @@ fi
 if [ "$planted" = env ]; then
   dc up -d --no-deps --force-recreate "$service"
 else
-  cat "$saved" > "$pwfile"
+  put_pw < "$saved"
 fi
 planted=""
 if wait_health healthy 240; then
@@ -180,9 +186,9 @@ if [ "$secret_in_test" = 0 ]; then
     fi
   else
     planted="file"
-    : > "$pwfile"
+    put_pw < /dev/null
     rc=$(rc_of run_check)
-    cat "$saved" > "$pwfile"
+    put_pw < "$saved"
     planted=""
   fi
   if [ "$rc" != 0 ]; then
